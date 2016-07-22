@@ -8,3 +8,8 @@ pub use self::scene_renderable::{
 
 mod scene_renderer;
 pub use self::scene_renderer::SceneRenderer;
+
+mod scene_transform;
+pub use self::scene_transform::{
+    SceneTransform, SceneTransformStore
+};
