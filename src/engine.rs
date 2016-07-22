@@ -49,7 +49,7 @@ impl Engine {
         // Temporarily create a triangle entity here for testing
         let triangle_entity = entity_manager.create();
         let triangle_renderable = build_triangle_renderable(&display);
-        scene_renderable_store.add_renderable(
+        scene_renderable_store.set_renderable(
             triangle_entity,
             triangle_renderable
         );

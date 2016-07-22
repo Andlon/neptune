@@ -15,6 +15,9 @@ implement_vertex!(RenderVertex, pos);
 
 // TODO: Ideally we'd like to abstract away glium-specific things
 pub struct SceneRenderable {
+    // TODO: Should probably just store vertices directly here,
+    // and then let the renderer cache vertices in GPU buffers
+    // as it sees fit.
     pub vertices: Rc<VertexBuffer<RenderVertex>>,
     pub indices: Rc<IndexBuffer<u32>>,
 
@@ -35,7 +38,7 @@ impl Identifier for SceneRenderableIdentifier {
 }
 
 pub struct SceneRenderableStore {
-    store: OneToOneStore<SceneRenderableIdentifier, SceneRenderable>,
+    store: OneToOneStore<SceneRenderable>,
 }
 
 impl SceneRenderableStore {
@@ -45,12 +48,11 @@ impl SceneRenderableStore {
         }
     }
 
-    pub fn add_renderable(&mut self, entity: Entity, renderable: SceneRenderable)
-        -> SceneRenderableIdentifier {
-        self.store.add_component(entity, renderable)
+    pub fn set_renderable(&mut self, entity: Entity, renderable: SceneRenderable) {
+        self.store.set_component(entity, renderable)
     }
 
-    pub fn renderables(&self) -> &HashMap<SceneRenderableIdentifier, SceneRenderable> {
+    pub fn renderables(&self) -> &HashMap<Entity, SceneRenderable> {
         &self.store.components
     }
 }
