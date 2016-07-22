@@ -4,7 +4,7 @@ use entity::Entity;
 use std::collections::HashMap;
 
 pub struct SceneTransform {
-    pub position: Vec3<u32>
+    pub position: Vec3<f32>
 
     // TODO: Support rotation
 }
@@ -22,6 +22,10 @@ impl SceneTransformStore {
 
     pub fn set_transform(&mut self, entity: Entity, transform: SceneTransform) {
         self.store.set_component(entity, transform);
+    }
+
+    pub fn lookup(&self, entity: &Entity) -> Option<&SceneTransform> {
+        self.store.lookup(entity)
     }
 
     pub fn renderables(&self) -> &HashMap<Entity, SceneTransform> {

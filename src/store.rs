@@ -24,6 +24,10 @@ impl<Component> OneToOneStore<Component>
     {
         self.components.insert(entity, component);
     }
+
+    pub fn lookup(&self, entity: &Entity) -> Option<&Component> {
+        self.components.get(entity)
+    }
 }
 
 /// A generic store which contains one-to-many mappings between entities and components

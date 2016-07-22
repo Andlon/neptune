@@ -1,5 +1,4 @@
 use entity::Entity;
-use value_types::{Vec3, Quaternion};
 use std::rc::Rc;
 use glium::{VertexBuffer, IndexBuffer};
 use store::{Identifier, OneToOneStore};
