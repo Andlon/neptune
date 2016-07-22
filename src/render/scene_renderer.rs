@@ -4,10 +4,6 @@ use glium;
 use value_types::Vec3;
 use render::*;
 
-pub struct SceneRenderer {
-    program: glium::Program
-}
-
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     let (width, height) = surface.get_dimensions();
     let aspect_ratio = height as f32 / width as f32;
@@ -26,7 +22,12 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     ]
 }
 
-fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+//fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+fn view_matrix(position: &Vec3<f32>, direction: &Vec3<f32>, up: &Vec3<f32>) -> [[f32; 4]; 4] {
+    let up = [up.x, up.y, up.z];
+    let position = [position.x, position.y, position.z];
+    let direction = [direction.x, direction.y, direction.z];
+
     let f = {
         let f = direction;
         let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
@@ -69,6 +70,18 @@ fn model_matrix(position: &Vec3<f32>) -> [[f32; 4]; 4] {
     ]
 }
 
+#[derive(Copy, Clone)]
+pub struct Camera {
+    pub pos: Vec3<f32>,
+    pub direction: Vec3<f32>,
+    pub up:  Vec3<f32>,
+}
+
+pub struct SceneRenderer {
+    program: glium::Program,
+    pub camera: Camera,
+}
+
 impl SceneRenderer {
     pub fn new<F>(display: &F) -> SceneRenderer where F: Facade {
         let vertex_shader_src = r#"
@@ -98,7 +111,12 @@ impl SceneRenderer {
             None).unwrap();
 
         SceneRenderer {
-            program: program
+            program: program,
+            camera: Camera {
+                pos: Vec3 { x: 0.0, y: 0.0, z: 0.0f32 },
+                direction: Vec3 { x: 0.0, y: 1.0, z: 0.0f32 },
+                up:  Vec3 { x: 0.0, y: 0.0, z: 1.0f32 }
+            }
         }
     }
 
@@ -107,10 +125,9 @@ impl SceneRenderer {
         transform_store: &SceneTransformStore,
         surface: &mut S)
     {
-        // TODO: Make this configurable
-        let camera_pos = [0.0, 0.0, 0.0f32];
-        let camera_direction = [0.0, 1.0, 0.0];
-        let up = [0.0, 0.0, 1.0];
+        let camera_pos = &self.camera.pos;
+        let camera_direction = &self.camera.direction;
+        let up = &self.camera.up;
 
         let view = view_matrix(&camera_pos, &camera_direction, &up);
         let perspective = perspective_matrix(surface);
