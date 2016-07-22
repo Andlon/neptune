@@ -1,6 +1,7 @@
 [package]
-name = "neptun"
+name = "neptune"
 version = "0.1.0"
 authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
 
 [dependencies]
+glium = "*"

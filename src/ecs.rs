@@ -33,7 +33,6 @@ impl EntityManager {
             entities: HashSet::new()
         }
     }
-
 }
 
 #[test]
@@ -47,7 +46,7 @@ fn identity_manager_create_counts_sequentially() {
 #[test]
 fn identity_manager_destroy_kills_entities() {
     let mut ent_man = EntityManager::new();
-    let entities = (0..3).map(|x| ent_man.create()).collect::<Vec<Entity>>();
+    let entities = (0..3).map(|_| ent_man.create()).collect::<Vec<Entity>>();
     ent_man.destroy(&entities[1]);
 
     assert_eq!(ent_man.alive(&entities[0]), true);
