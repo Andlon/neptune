@@ -1,5 +1,5 @@
 use entity::{Entity, EntityManager};
-use render::scene_renderer::{SceneRenderer, SceneRenderable, RenderVertex};
+use render::{SceneRenderer, SceneRenderableStore, SceneRenderable, RenderVertex};
 use glium;
 use glium::backend::Facade;
 
@@ -37,6 +37,8 @@ impl Engine {
     }
 
     pub fn run(&mut self) {
+        let mut scene_renderable_store = SceneRenderableStore::new();
+
         // Move this into a WindowManager or similar
         use glium::{DisplayBuild, Surface};
         let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
@@ -47,7 +49,7 @@ impl Engine {
         // Temporarily create a triangle entity here for testing
         let triangle_entity = entity_manager.create();
         let triangle_renderable = build_triangle_renderable(&display);
-        let triangle_identifier = scene_renderer.add_renderable(
+        scene_renderable_store.add_renderable(
             triangle_entity,
             triangle_renderable
         );
@@ -57,7 +59,7 @@ impl Engine {
             let mut target = display.draw();
             target.clear_color(0.0, 0.0, 0.0, 1.0);
 
-            scene_renderer.render(&mut target);
+            scene_renderer.render(&scene_renderable_store, &mut target);
 
             target.finish().unwrap();
 

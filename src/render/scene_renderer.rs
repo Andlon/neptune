@@ -1,37 +1,9 @@
-use value_types::Vec3;
 use glium::{Surface, VertexBuffer, IndexBuffer};
 use glium::backend::Facade;
 use glium;
-use entity::Entity;
-use std::collections::HashMap;
-use std::rc::Rc;
-
-#[derive(Copy, Clone)]
-pub struct RenderVertex {
-    pub pos: [f32; 3]
-}
-
-implement_vertex!(RenderVertex, pos);
-
-pub struct SceneRenderable {
-    pub vertices: Rc<VertexBuffer<RenderVertex>>,
-    pub indices: Rc<IndexBuffer<u32>>
-}
-
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
-pub struct SceneRenderableIdentifier {
-    id: u32
-}
-
-struct RenderableWithPosition {
-    position: Vec3<f32>,
-    renderable: SceneRenderable
-}
+use render::*;
 
 pub struct SceneRenderer {
-    next_identifier: SceneRenderableIdentifier,
-    entity_map: HashMap<Entity, Vec<SceneRenderableIdentifier>>,
-    renderables: HashMap<SceneRenderableIdentifier, RenderableWithPosition>,
     program: glium::Program
 }
 
@@ -59,18 +31,12 @@ impl SceneRenderer {
             None).unwrap();
 
         SceneRenderer {
-            next_identifier: SceneRenderableIdentifier { id: 0 },
-            entity_map: HashMap::new(),
-            renderables: HashMap::new(),
             program: program
         }
     }
 
-    pub fn render<S: Surface>(&mut self, surface: &mut S) {
-        for renderable_with_pos in self.renderables.values_mut() {
-            let pos = &renderable_with_pos.position;
-            let renderable = &renderable_with_pos.renderable;
-
+    pub fn render<S: Surface>(&mut self, store: &SceneRenderableStore, surface: &mut S) {
+        for renderable in store.renderables.values() {
             surface.draw(
                 &renderable.vertices as &VertexBuffer<RenderVertex>,
                 &renderable.indices as &IndexBuffer<u32>,
@@ -79,22 +45,5 @@ impl SceneRenderer {
                 &Default::default()
             ).unwrap();
         }
-    }
-
-    pub fn add_renderable(&mut self, entity: Entity, renderable: SceneRenderable)
-        -> SceneRenderableIdentifier {
-        let identifier = self.next_identifier;
-        self.next_identifier = SceneRenderableIdentifier { id: identifier.id + 1 };
-
-        let scene_entities = self.entity_map.entry(entity).or_insert_with(|| Vec::new());
-        scene_entities.push(identifier);
-
-        let renderable_with_pos = RenderableWithPosition {
-            position: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            renderable: renderable
-        };
-
-        self.renderables.insert(identifier, renderable_with_pos);
-        identifier
     }
 }
