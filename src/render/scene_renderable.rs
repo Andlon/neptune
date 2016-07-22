@@ -2,6 +2,7 @@ use entity::Entity;
 use value_types::{Vec3, Quaternion};
 use std::rc::Rc;
 use glium::{VertexBuffer, IndexBuffer};
+use store::{Identifier, OneToOneStore};
 
 use std::collections::HashMap;
 
@@ -28,28 +29,28 @@ pub struct SceneRenderableIdentifier {
     id: u32
 }
 
+impl Identifier for SceneRenderableIdentifier {
+    fn new(id: u32) -> Self { SceneRenderableIdentifier { id: id } }
+    fn id(&self) -> u32 { self.id }
+}
+
 pub struct SceneRenderableStore {
-    next_identifier: SceneRenderableIdentifier,
-    entity_map: HashMap<Entity, SceneRenderableIdentifier>,
-    pub renderables: HashMap<SceneRenderableIdentifier, SceneRenderable>
+    store: OneToOneStore<SceneRenderableIdentifier, SceneRenderable>,
 }
 
 impl SceneRenderableStore {
     pub fn new() -> SceneRenderableStore {
         SceneRenderableStore {
-            next_identifier: SceneRenderableIdentifier { id: 0 },
-            entity_map: HashMap::new(),
-            renderables: HashMap::new()
+            store: OneToOneStore::new()
         }
     }
 
     pub fn add_renderable(&mut self, entity: Entity, renderable: SceneRenderable)
         -> SceneRenderableIdentifier {
-        let identifier = self.next_identifier;
-        self.next_identifier = SceneRenderableIdentifier { id: identifier.id + 1 };
+        self.store.add_component(entity, renderable)
+    }
 
-        self.entity_map.insert(entity, identifier);
-        self.renderables.insert(identifier, renderable);
-        identifier
+    pub fn renderables(&self) -> &HashMap<SceneRenderableIdentifier, SceneRenderable> {
+        &self.store.components
     }
 }

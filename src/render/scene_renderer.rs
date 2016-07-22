@@ -36,7 +36,7 @@ impl SceneRenderer {
     }
 
     pub fn render<S: Surface>(&mut self, store: &SceneRenderableStore, surface: &mut S) {
-        for renderable in store.renderables.values() {
+        for renderable in store.renderables().values() {
             surface.draw(
                 &renderable.vertices as &VertexBuffer<RenderVertex>,
                 &renderable.indices as &IndexBuffer<u32>,
