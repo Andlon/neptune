@@ -1,10 +1,11 @@
-use value_types::{Vec3, Quaternion};
 use store::OneToOneStore;
 use entity::Entity;
 use std::collections::HashMap;
 
+use cgmath::Point3;
+
 pub struct SceneTransform {
-    pub position: Vec3<f32>
+    pub position: Point3<f32>
 
     // TODO: Support rotation
 }

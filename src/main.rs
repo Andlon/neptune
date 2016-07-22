@@ -1,11 +1,12 @@
 #[macro_use]
 extern crate glium;
+extern crate cgmath;
 
 mod entity;
 mod engine;
 mod render;
-mod value_types;
 mod store;
+mod input_manager;
 
 use engine::Engine;
 

@@ -1,8 +1,9 @@
 use glium::{Surface, VertexBuffer, IndexBuffer};
 use glium::backend::Facade;
 use glium;
-use value_types::Vec3;
 use render::*;
+
+use cgmath::{Vector3, Point3};
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     let (width, height) = surface.get_dimensions();
@@ -23,7 +24,7 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
 }
 
 //fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
-fn view_matrix(position: &Vec3<f32>, direction: &Vec3<f32>, up: &Vec3<f32>) -> [[f32; 4]; 4] {
+fn view_matrix(position: &Point3<f32>, direction: &Vector3<f32>, up: &Vector3<f32>) -> [[f32; 4]; 4] {
     let up = [up.x, up.y, up.z];
     let position = [position.x, position.y, position.z];
     let direction = [direction.x, direction.y, direction.z];
@@ -61,7 +62,7 @@ fn view_matrix(position: &Vec3<f32>, direction: &Vec3<f32>, up: &Vec3<f32>) -> [
     ]
 }
 
-fn model_matrix(position: &Vec3<f32>) -> [[f32; 4]; 4] {
+fn model_matrix(position: &Point3<f32>) -> [[f32; 4]; 4] {
     [
         [1.0, 0.0, 0.0, 0.0],
         [0.0, 1.0, 0.0, 0.0],
@@ -72,9 +73,9 @@ fn model_matrix(position: &Vec3<f32>) -> [[f32; 4]; 4] {
 
 #[derive(Copy, Clone)]
 pub struct Camera {
-    pub pos: Vec3<f32>,
-    pub direction: Vec3<f32>,
-    pub up:  Vec3<f32>,
+    pub pos: Point3<f32>,
+    pub direction: Vector3<f32>,
+    pub up:  Vector3<f32>,
 }
 
 pub struct SceneRenderer {
@@ -113,9 +114,9 @@ impl SceneRenderer {
         SceneRenderer {
             program: program,
             camera: Camera {
-                pos: Vec3 { x: 0.0, y: 0.0, z: 0.0f32 },
-                direction: Vec3 { x: 0.0, y: 1.0, z: 0.0f32 },
-                up:  Vec3 { x: 0.0, y: 0.0, z: 1.0f32 }
+                pos: Point3 { x: 0.0, y: 0.0, z: 0.0f32 },
+                direction: Vector3 { x: 0.0, y: 1.0, z: 0.0f32 },
+                up:  Vector3 { x: 0.0, y: 0.0, z: 1.0f32 }
             }
         }
     }
