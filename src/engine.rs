@@ -1,5 +1,5 @@
-use ecs::{Entity, EntityManager};
-use scene_renderer::{SceneRenderer, SceneRenderable, RenderVertex};
+use entity::{Entity, EntityManager};
+use render::scene_renderer::{SceneRenderer, SceneRenderable, RenderVertex};
 use glium;
 use glium::backend::Facade;
 

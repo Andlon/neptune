@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate glium;
 
-mod ecs;
+mod entity;
 mod engine;
-mod scene_renderer;
+mod render;
 mod value_types;
 
 use engine::Engine;

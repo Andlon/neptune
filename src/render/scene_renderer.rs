@@ -2,7 +2,7 @@ use value_types::Vec3;
 use glium::{Surface, VertexBuffer, IndexBuffer};
 use glium::backend::Facade;
 use glium;
-use ecs::Entity;
+use entity::Entity;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -24,7 +24,7 @@ pub struct SceneRenderableIdentifier {
 }
 
 struct RenderableWithPosition {
-    position: Vec3,
+    position: Vec3<f32>,
     renderable: SceneRenderable
 }
 
