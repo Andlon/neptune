@@ -35,9 +35,10 @@ impl Engine {
         let mut input_manager = InputManager::new();
 
         // Temporarily create a triangle entity here for testing
+        let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
+                            Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));
         let triangle_entity = entity_manager.create();
-        let triangle_renderable = build_triangle_renderable(&display,
-            Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0), Point3::new(0.0, 0.5, 0.0));
+        let triangle_renderable = build_tetrahedron_renderable(&display, a, b, c, d);
         let triangle_transform = SceneTransform {
             position: Point3 { x: 0.25, y: 5.0, z: 0.25 }
         };
