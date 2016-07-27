@@ -4,10 +4,17 @@ use glium::{VertexBuffer, IndexBuffer};
 use store::{Identifier, OneToOneStore};
 
 use std::collections::HashMap;
+use cgmath;
 
 #[derive(Copy, Clone)]
 pub struct RenderVertex {
     pub pos: [f32; 3]
+}
+
+impl From<cgmath::Point3<f32>> for RenderVertex {
+    fn from(other: cgmath::Point3<f32>) -> Self {
+        RenderVertex { pos: [ other.x, other.y, other.z ]}
+    }
 }
 
 implement_vertex!(RenderVertex, pos);

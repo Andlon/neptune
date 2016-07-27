@@ -13,3 +13,9 @@ mod scene_transform;
 pub use self::scene_transform::{
     SceneTransform, SceneTransformStore
 };
+
+mod primitives;
+pub use self::primitives::{
+    build_triangle_renderable,
+    build_tetrahedron_renderable
+};

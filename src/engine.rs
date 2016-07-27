@@ -14,25 +14,6 @@ pub struct Engine {
 
 }
 
-// Temp code to build a triangle entity
-fn build_triangle_renderable<F>(display: &F) -> SceneRenderable where F: Facade {
-    let a = RenderVertex { pos: [-0.5, -0.5, 0.0] };
-    let b = RenderVertex { pos: [ 0.0,  0.5, 0.0] };
-    let c = RenderVertex { pos: [ 0.5, -0.25, 0.0] };
-    let shape = vec![a, b, c];
-
-    let vertex_buffer = glium::VertexBuffer::new(display, &shape).unwrap();
-    let indices = glium::IndexBuffer::new(display,
-        glium::index::PrimitiveType::TrianglesList,
-        &[0, 1, 2]).unwrap();
-
-    use std::rc::Rc;
-    SceneRenderable {
-        vertices: Rc::new(vertex_buffer),
-        indices: Rc::new(indices)
-    }
-}
-
 impl Engine {
 
     pub fn new() -> Engine {
@@ -55,7 +36,8 @@ impl Engine {
 
         // Temporarily create a triangle entity here for testing
         let triangle_entity = entity_manager.create();
-        let triangle_renderable = build_triangle_renderable(&display);
+        let triangle_renderable = build_triangle_renderable(&display,
+            Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0), Point3::new(0.0, 0.5, 0.0));
         let triangle_transform = SceneTransform {
             position: Point3 { x: 0.25, y: 5.0, z: 0.25 }
         };
