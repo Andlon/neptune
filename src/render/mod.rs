@@ -19,3 +19,5 @@ pub use self::primitives::{
     build_triangle_renderable,
     build_tetrahedron_renderable
 };
+
+mod camera;
