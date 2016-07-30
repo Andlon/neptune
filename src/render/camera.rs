@@ -16,14 +16,6 @@ pub struct Camera {
 }
 
 impl Camera {
-    // TODO: impl Default trait instead...?
-    pub fn default() -> Self {
-        Camera {
-            position: Point3::new(0.0, 0.0, 0.0),
-            orientation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
-        }
-    }
-
     pub fn translate(self, translation: Vector3<f32>) -> Self {
         Camera {
             position: self.position + translation,
@@ -57,6 +49,15 @@ impl Camera {
         let mut view_mat = Matrix4::from(self.orientation);
         view_mat.w = self.position.to_vec().extend(1.0);
         view_mat.inverse_transform().unwrap()
+    }
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Camera {
+            position: Point3::new(0.0, 0.0, 0.0),
+            orientation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
+        }
     }
 }
 
