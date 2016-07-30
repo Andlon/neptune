@@ -1,4 +1,4 @@
-use cgmath::{Quaternion, Point3, Vector3};
+use cgmath::{Quaternion, Point3, Vector3, Matrix4, Transform};
 use cgmath::{ApproxEq, EuclideanSpace, Rad, Deg, Rotation3, Rotation};
 
 #[derive(Copy, Clone, Debug)]
@@ -14,8 +14,6 @@ pub struct Camera {
     /// "up" vector. 
     pub orientation: Quaternion<f32>,
 }
-
-
 
 impl Camera {
     // TODO: impl Default trait instead...?
@@ -53,6 +51,12 @@ impl Camera {
     pub fn up(&self) -> Vector3<f32> {
         let zaxis = Vector3::new(0.0, 0.0, 1.0f32);
         self.orientation.rotate_vector(zaxis)
+    }
+
+    pub fn view_matrix(&self) -> Matrix4<f32> {
+        let mut view_mat = Matrix4::from(self.orientation);
+        view_mat.w = self.position.to_vec().extend(1.0);
+        view_mat.inverse_transform().unwrap()
     }
 }
 
