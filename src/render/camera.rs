@@ -1,5 +1,4 @@
-use cgmath::{Quaternion, Point3, Vector3, Matrix4, Transform};
-use cgmath::{ApproxEq, EuclideanSpace, Rad, Deg, Rotation3, Rotation};
+use cgmath::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Camera {
@@ -46,9 +45,9 @@ impl Camera {
     }
 
     pub fn view_matrix(&self) -> Matrix4<f32> {
-        let mut view_mat = Matrix4::from(self.orientation);
-        view_mat.w = self.position.to_vec().extend(1.0);
-        view_mat.inverse_transform().unwrap()
+        let mut camera_transform = Matrix4::from(self.orientation);
+        camera_transform.w = self.position.to_vec().extend(1.0);
+        camera_transform.inverse_transform().unwrap()
     }
 }
 
@@ -153,4 +152,25 @@ fn test_camera_up_after_rotation() {
     let camera = Camera::default().rotate(rotation);
 
     assert_approx_eq!(neg_yaxis, camera.up());
+}
+
+#[test]
+fn test_camera_default_view_matrix_is_identity() {
+    let camera = Camera::default();
+    let view = camera.view_matrix();
+    let identity = Matrix4::from_diagonal(Vector4::new(1.0f32, 1.0, 1.0, 1.0));
+
+    assert_approx_eq!(identity, view);
+}
+
+#[test]
+fn test_camera_view_matrix_undoes_translation() {
+    let translation = Vector3::new(2.0, -3.0, 5.0);
+    let camera = Camera::default().translate(translation);
+    let view = camera.view_matrix();
+
+    let trans4 = translation.extend(1.0);
+    let expected = Vector4::new(0.0, 0.0, 0.0, 1.0f32);
+
+    assert_approx_eq!(expected, view * trans4);
 }
