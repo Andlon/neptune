@@ -1,7 +1,7 @@
 use render::SceneRenderer;
 use glium::glutin::{ElementState, VirtualKeyCode};
 
-use cgmath::{InnerSpace, Point3, Vector3};
+use cgmath::*;
 
 pub struct InputManager {
 
@@ -28,8 +28,10 @@ impl InputManager {
 
         use glium::glutin::VirtualKeyCode;
         let delta = 0.25;
+        let delta_rot = 0.1;
 
         if state == ElementState::Pressed {
+            let camera = scene_renderer.camera;
             match vkcode {
                 VirtualKeyCode::W => {
                     scene_renderer.camera = walk_camera(scene_renderer.camera, delta)
@@ -43,6 +45,22 @@ impl InputManager {
                 VirtualKeyCode::A => {
                     scene_renderer.camera = strafe_camera(scene_renderer.camera, -delta)
                 },
+                VirtualKeyCode::Left => {
+                    let rotation = Matrix3::from_axis_angle(camera.up(), Rad::new(delta_rot));
+                    scene_renderer.camera = camera.rotate(rotation)
+                },
+                VirtualKeyCode::Right => {
+                    let rotation = Matrix3::from_axis_angle(camera.up(), Rad::new(-delta_rot));
+                    scene_renderer.camera = camera.rotate(rotation)
+                },
+                VirtualKeyCode::Up => {
+                    let rotation = Matrix3::from_axis_angle(camera.right(), Rad::new(delta_rot));
+                    scene_renderer.camera = camera.rotate(rotation)
+                },
+                VirtualKeyCode::Down => {
+                    let rotation = Matrix3::from_axis_angle(camera.right(), Rad::new(-delta_rot));
+                    scene_renderer.camera = camera.rotate(rotation)
+                },
                 _ => ()
             }
         }
@@ -53,20 +71,10 @@ use render::Camera;
 
 /// Moves the camera delta units in its current direction.
 fn walk_camera(camera: Camera, delta: f32) -> Camera {
-    let mut camera = camera;
-    let unit_direction = camera.direction.normalize();
-    camera.pos = camera.pos + delta * unit_direction;
-    camera
+    camera.translate(delta * camera.direction())
 }
 
 /// Moves the camera delta units right or left, where delta > 0 moves the camera to the right.
 fn strafe_camera(camera: Camera, delta: f32) -> Camera {
-    let mut camera = camera;
-    let unit_direction = camera.direction.cross(camera.up).normalize();
-
-    // Note the sign: Remember that we are not really moving the camera as much as we are
-    // moving the world.
-    // Note to self: Is this correct, or a bug? Should go over the math.
-    camera.pos = camera.pos + (- delta) * unit_direction;
-    camera
+    camera.translate(delta * camera.right())
 }
