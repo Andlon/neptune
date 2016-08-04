@@ -11,7 +11,7 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     let (width, height) = surface.get_dimensions();
     let aspect_ratio = height as f32 / width as f32;
 
-    let fov: f32 = 3.141592 / 2.0;
+    let fov: f32 = 3.141592 / 3.0;
     let zfar = 1024.0;
     let znear = 0.1;
 
