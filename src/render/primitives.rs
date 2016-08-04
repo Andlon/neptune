@@ -80,16 +80,45 @@ pub fn build_tetrahedron_renderable<F>(display: &F,
     a: Point3<f32>, b: Point3<f32>, c: Point3<f32>, d: Point3<f32>)
      -> SceneRenderable where F: Facade {
 
+    // The faces of the tetrahedron are composed of the following vertex combinations,
+    // where the clockwise orientation of the vertices denote the normal direction.
+    //
+    // cba,
+    // abd,
+    // adc,
+    // bcd
+
+    // Don't share the vertices between faces,
+    // so that the vertex normal for each vertex is aligned
+    // with the face normal.
+
+    let ab = b - a;
+    let ac = c - a;
+    let ad = d - a;
+    let bc = c - b;
+    let bd = d - b;
+    let ca = -ac;
+    let cb = -bc;
+
+    let cba_normal = RenderNormal::from(cb.cross(ca).normalize());
+    let abd_normal = RenderNormal::from(ab.cross(ad).normalize());
+    let adc_normal = RenderNormal::from(ad.cross(ac).normalize());
+    let bcd_normal = RenderNormal::from(bc.cross(bd).normalize());
+
     let a = RenderVertex::from(a);
     let b = RenderVertex::from(b);
     let c = RenderVertex::from(c);
     let d = RenderVertex::from(d);
 
-    let vertices = vec!(a, b, c, d);
-    let indices = [ 0, 1, 2,
-                    0, 1, 3,
-                    1, 2, 3,
-                    0, 2, 3 ];
-    let normals = weighted_vertex_normals(&vertices, &indices);
+    let vertices = vec!(c, b, a,
+                        a, b, d,
+                        a, d, c,
+                        b, c, d);
+    let normals = vec!(cba_normal, cba_normal, cba_normal,
+                       abd_normal, abd_normal, abd_normal,
+                       adc_normal, adc_normal, adc_normal,
+                       bcd_normal, bcd_normal, bcd_normal);
+    let indices: Vec<u32> = (0..12).collect();
+
     build_renderable(display, &vertices, &normals, &indices)
 }

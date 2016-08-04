@@ -70,7 +70,7 @@ impl SceneRenderer {
 
             void main() {
                 float brightness = dot(normalize(vertex_normal), normalize(light_direction));
-                vec3 dark_color = vec3(0.1, 0.0, 0.0);
+                vec3 dark_color = vec3(0.5, 0.0, 0.0);
                 vec3 regular_color = vec3(1.0, 0.0, 0.0);
                 color = vec4(mix(dark_color, regular_color, brightness), 1.0);
             }
