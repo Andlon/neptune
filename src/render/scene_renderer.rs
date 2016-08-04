@@ -53,9 +53,9 @@ impl SceneRenderer {
             out vec3 vertex_normal;
 
             void main() {
-                mat4 modelview = model * view;
+                mat4 modelview = view * model;
                 vertex_normal = transpose(inverse(mat3(modelview))) * normal;
-                gl_Position = perspective * view * model * vec4(pos, 1.0);
+                gl_Position = perspective * modelview * vec4(pos, 1.0);
             }
         "#;
 
