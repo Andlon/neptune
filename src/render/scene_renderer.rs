@@ -11,7 +11,7 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     let (width, height) = surface.get_dimensions();
     let aspect_ratio = height as f32 / width as f32;
 
-    let fov: f32 = 3.141592 / 3.0;
+    let fov: f32 = 3.141592 / 2.0;
     let zfar = 1024.0;
     let znear = 0.1;
 
@@ -44,21 +44,35 @@ impl SceneRenderer {
         let vertex_shader_src = r#"
             #version 140
             in vec3 pos;
+            in vec3 normal;
 
             uniform mat4 perspective;
             uniform mat4 view;
             uniform mat4 model;
 
+            out vec3 vertex_normal;
+
             void main() {
+                mat4 modelview = model * view;
+                vertex_normal = transpose(inverse(mat3(modelview))) * normal;
                 gl_Position = perspective * view * model * vec4(pos, 1.0);
             }
         "#;
 
         let fragment_shader_src = r#"
             #version 140
+
+            in vec3 vertex_normal;
+
             out vec4 color;
+
+            uniform vec3 light_direction;
+
             void main() {
-                color = vec4(1.0, 0.0, 0.0, 1.0);
+                float brightness = dot(normalize(vertex_normal), normalize(light_direction));
+                vec3 dark_color = vec3(0.1, 0.0, 0.0);
+                vec3 regular_color = vec3(1.0, 0.0, 0.0);
+                color = vec4(mix(dark_color, regular_color, brightness), 1.0);
             }
         "#;
 
@@ -86,11 +100,15 @@ impl SceneRenderer {
             if let Some(transform) = transform_store.lookup(entity) {
                 let model = model_matrix(&transform.position);
                 let uniforms = uniform! {
-                    model: model, view: view, perspective: perspective
+                    model: model,
+                    view: view,
+                    perspective: perspective,
+                    light_direction: [1.0f32, 1.0f32, 0.0]
                 };
 
                 surface.draw(
-                    &renderable.vertices as &VertexBuffer<RenderVertex>,
+                    (&renderable.vertices as &VertexBuffer<RenderVertex>,
+                        &renderable.normals as &VertexBuffer<RenderNormal>),
                     &renderable.indices as &IndexBuffer<u32>,
                     &self.program,
                     &uniforms,

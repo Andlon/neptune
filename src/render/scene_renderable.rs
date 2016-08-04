@@ -11,13 +11,25 @@ pub struct RenderVertex {
     pub pos: [f32; 3]
 }
 
+#[derive(Copy, Clone)]
+pub struct RenderNormal {
+    pub normal: [f32; 3]
+}
+
 impl From<cgmath::Point3<f32>> for RenderVertex {
-    fn from(other: cgmath::Point3<f32>) -> Self {
-        RenderVertex { pos: [ other.x, other.y, other.z ]}
+    fn from(point: cgmath::Point3<f32>) -> Self {
+        RenderVertex { pos: [ point.x, point.y, point.z ]}
+    }
+}
+
+impl From<cgmath::Vector3<f32>> for RenderNormal {
+    fn from(vector: cgmath::Vector3<f32>) -> Self {
+        RenderNormal { normal: [ vector.x, vector.y, vector.z ]}
     }
 }
 
 implement_vertex!(RenderVertex, pos);
+implement_vertex!(RenderNormal, normal);
 
 // TODO: Ideally we'd like to abstract away glium-specific things
 pub struct SceneRenderable {
@@ -25,6 +37,7 @@ pub struct SceneRenderable {
     // and then let the renderer cache vertices in GPU buffers
     // as it sees fit.
     pub vertices: Rc<VertexBuffer<RenderVertex>>,
+    pub normals: Rc<VertexBuffer<RenderNormal>>,
     pub indices: Rc<IndexBuffer<u32>>,
 
     // Currently we have no concept of local transform,

@@ -2,7 +2,7 @@
 
 mod scene_renderable;
 pub use self::scene_renderable::{
-        RenderVertex, SceneRenderable,
+        RenderVertex, RenderNormal, SceneRenderable,
         SceneRenderableIdentifier, SceneRenderableStore
     };
 
