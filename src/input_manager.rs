@@ -45,6 +45,12 @@ impl InputManager {
                 VirtualKeyCode::A => {
                     scene_renderer.camera = strafe_camera(scene_renderer.camera, -delta)
                 },
+                VirtualKeyCode::Q => {
+                    scene_renderer.camera = camera.rotate_axis_angle(camera.direction(), Rad::new(-delta))
+                },
+                VirtualKeyCode::E => {
+                    scene_renderer.camera = camera.rotate_axis_angle(camera.direction(), Rad::new(delta))
+                },
                 VirtualKeyCode::Left => {
                     let rotation = Matrix3::from_axis_angle(camera.up(), Rad::new(delta_rot));
                     scene_renderer.camera = camera.rotate(rotation)
