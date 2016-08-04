@@ -6,10 +6,7 @@ pub struct Camera {
     pub position: Point3<f32>,
 
     /// Orientation of camera coordinate system relative to the world coordinate system.
-    ///
-    /// Note: Because of issues with the cgmath API, we use a Matrix3 type to represent
-    /// the rotation.
-    orientation: Matrix3<f32>,
+    orientation: Quaternion<f32>
 }
 
 impl Camera {
@@ -34,10 +31,10 @@ impl Camera {
             // The p, u and -d unit vectors happen to be the image of the
             // x, y and z axis vectors in world space under the rotation transform,
             // so we may form the rotation matrix from this
-            let rotation = Matrix3::from_cols(p, u, -d);
+            let rotation_matrix = Matrix3::from_cols(p, u, -d);
             let camera = Camera {
                 position: camera_position,
-                orientation: rotation
+                orientation: Quaternion::from(rotation_matrix)
             };
 
             Some(camera)
@@ -51,20 +48,23 @@ impl Camera {
         }
     }
 
+    // TODO: remove this method and use only axis angle
     pub fn rotate(self, rotation: Matrix3<f32>) -> Self {
         // Note: For now we just take a general 3x3 matrix, but this
         // makes for a pretty bad API as there are no guarantees that
         // the user supplies a rotation matrix. The current API of
         // cgmath is insufficient for this particular case.
-        let new_orientation = rotation * self.orientation;
+        let new_orientation = (Quaternion::from(rotation) * self.orientation).normalize();
 
-        // DEBUG: Check orthogonality.
-        // TODO: Orthogonalize matrix or preferably use quaternions which can
-        // simply be normalized instead.
-        println!("<x, y>: {:?}", new_orientation.x.dot(new_orientation.y));
-        println!("<x, z>: {:?}", new_orientation.x.dot(new_orientation.z));
-        println!("<y, z>: {:?}", new_orientation.y.dot(new_orientation.z));
+        Camera {
+            position: self.position,
+            orientation: new_orientation
+        }
+    }
 
+    pub fn rotate_axis_angle(&self, axis: Vector3<f32>, angle: Rad<f32>) -> Self {
+        let quat = Quaternion::from_axis_angle(axis, angle);
+        let new_orientation = (quat * self.orientation).normalize();
         Camera {
             position: self.position,
             orientation: new_orientation
