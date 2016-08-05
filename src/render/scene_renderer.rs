@@ -92,6 +92,14 @@ impl SceneRenderer {
         transform_store: &SceneTransformStore,
         surface: &mut S)
     {
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                .. Default::default()
+            },
+            .. Default::default()
+        };
 
         let view: [[f32; 4]; 4] = self.camera.view_matrix().into();
         let perspective = perspective_matrix(surface);
@@ -112,7 +120,7 @@ impl SceneRenderer {
                     &renderable.indices as &IndexBuffer<u32>,
                     &self.program,
                     &uniforms,
-                    &Default::default()
+                    &params
                 ).unwrap();
             }
         }

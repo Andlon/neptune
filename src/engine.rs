@@ -28,7 +28,9 @@ impl Engine {
 
         // Move this into a WindowManager or similar
         use glium::{DisplayBuild, Surface};
-        let display = glium::glutin::WindowBuilder::new().build_glium().unwrap();
+        let display = glium::glutin::WindowBuilder::new()
+            .with_depth_buffer(24)
+            .build_glium().unwrap();
 
         // Set up systems
         let mut scene_renderer = SceneRenderer::new(&display);
@@ -57,7 +59,7 @@ impl Engine {
         loop {
             // Move this into a window manager or something too
             let mut target = display.draw();
-            target.clear_color(0.0, 0.0, 0.0, 1.0);
+            target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
             scene_renderer.render(&scene_renderable_store, &scene_transform_store, &mut target);
 
