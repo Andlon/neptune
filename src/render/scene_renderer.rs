@@ -51,11 +51,13 @@ impl SceneRenderer {
             uniform mat4 model;
 
             out vec3 vertex_normal;
+            out vec3 vertex_position;
 
             void main() {
                 mat4 modelview = view * model;
                 vertex_normal = transpose(inverse(mat3(modelview))) * normal;
                 gl_Position = perspective * modelview * vec4(pos, 1.0);
+                vertex_position = gl_Position.xyz / gl_Position.w;
             }
         "#;
 
@@ -63,16 +65,24 @@ impl SceneRenderer {
             #version 140
 
             in vec3 vertex_normal;
+            in vec3 vertex_position;
 
             out vec4 color;
 
             uniform vec3 light_direction;
 
+            const vec3 ambient_color = vec3(0.2, 0.0, 0.0);
+            const vec3 diffuse_color = vec3(0.6, 0.0, 0.0);
+            const vec3 specular_color = vec3(1.0, 1.0, 1.0);
+
             void main() {
-                float brightness = dot(normalize(vertex_normal), normalize(light_direction));
-                vec3 dark_color = vec3(0.5, 0.0, 0.0);
-                vec3 regular_color = vec3(1.0, 0.0, 0.0);
-                color = vec4(mix(dark_color, regular_color, brightness), 1.0);
+                float diffuse = max(dot(normalize(vertex_normal), normalize(light_direction)), 0.0);
+
+                vec3 camera_dir = normalize(-vertex_position);
+                vec3 half_direction = normalize(normalize(light_direction) + camera_dir);
+                float specular = pow(max(dot(half_direction, normalize(vertex_normal)), 0.0), 16.0);
+
+                color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
             }
         "#;
 
@@ -101,8 +111,17 @@ impl SceneRenderer {
             .. Default::default()
         };
 
-        let view: [[f32; 4]; 4] = self.camera.view_matrix().into();
+        let view_matrix = self.camera.view_matrix();
+        let view: [[f32; 4]; 4] = view_matrix.into();
         let perspective = perspective_matrix(surface);
+
+        // Transform the light direction by the view transform,
+        // so that the direction of the light does not change as
+        // the camera orientation changes.
+        let light_direction: [f32; 3] = {
+            let dir4 = view_matrix * Vector4::new(1.0f32, 1.0f32, 0.0, 0.0);
+            dir4.truncate().into()
+        };
 
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
@@ -111,7 +130,7 @@ impl SceneRenderer {
                     model: model,
                     view: view,
                     perspective: perspective,
-                    light_direction: [1.0f32, 1.0f32, 0.0]
+                    light_direction: light_direction
                 };
 
                 surface.draw(
