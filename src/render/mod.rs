@@ -16,7 +16,8 @@ pub use self::scene_transform::{
 
 mod primitives;
 pub use self::primitives::{
-    build_tetrahedron_renderable
+    build_tetrahedron_renderable,
+    build_icosahedron_renderable
 };
 
 mod camera;

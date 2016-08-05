@@ -72,20 +72,12 @@ pub fn build_tetrahedron_renderable<F>(display: &F,
     build_renderable(display, &mesh, &normals)
 }
 
-pub fn build_icosahedron_renderable<F>(display: &F) -> SceneRenderable {
+pub fn build_icosahedron_renderable<F>(display: &F) -> SceneRenderable where F: Facade {
     use geometry::icosahedron;
-    let mesh = icosahedron();
+    let mesh = icosahedron().replicate_vertices();
+    let normals = weighted_vertex_normals(&mesh);
 
-    // TODO: Remove clone() and instead implement proper .from() for references
-    let vertices = mesh.vertices().iter().map(|v| RenderVertex::from(v.clone()));
-    let indices: Vec<u32> = mesh.triangles().iter()
-                                .flat_map(|t| Vec::from(&t.indices as &[usize]))
-                                .map(|index| index as u32)
-                                .collect();
-
-
-
-    unimplemented!()
+    build_renderable(display, &mesh, &normals)
 }
 
 #[cfg(test)]

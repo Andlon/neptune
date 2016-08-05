@@ -40,10 +40,19 @@ impl Engine {
         let triangle_entity = entity_manager.create();
         let triangle_renderable = build_tetrahedron_renderable(&display, a, b, c, d);
         let triangle_transform = SceneTransform {
-            position: Point3 { x: 0.25, y: 5.0, z: 0.25 }
+            position: Point3 { x: 0.0, y: 5.0, z: 0.0 }
         };
         scene_renderable_store.set_renderable(triangle_entity, triangle_renderable);
         scene_transform_store.set_transform(triangle_entity, triangle_transform);
+
+        // Also create an icosahedron
+        let ico_entity = entity_manager.create();
+        let ico_renderable = build_icosahedron_renderable(&display);
+        let ico_transform = SceneTransform {
+            position: Point3 { x: 0.0, y: 15.0, z: 0.0 }
+        };
+        scene_renderable_store.set_renderable(ico_entity, ico_renderable);
+        scene_transform_store.set_transform(ico_entity, ico_transform);
 
         loop {
             // Move this into a window manager or something too
