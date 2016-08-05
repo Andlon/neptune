@@ -6,14 +6,22 @@ use store::{Identifier, OneToOneStore};
 use std::collections::HashMap;
 use cgmath;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct RenderVertex {
     pub pos: [f32; 3]
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct RenderNormal {
     pub normal: [f32; 3]
+}
+
+impl RenderVertex {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        RenderVertex {
+            pos: [x, y, z]
+        }
+    }
 }
 
 impl From<cgmath::Point3<f32>> for RenderVertex {
@@ -22,9 +30,39 @@ impl From<cgmath::Point3<f32>> for RenderVertex {
     }
 }
 
+impl RenderNormal {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        RenderNormal {
+            normal: [x, y, z]
+        }
+    }
+}
+
 impl From<cgmath::Vector3<f32>> for RenderNormal {
     fn from(vector: cgmath::Vector3<f32>) -> Self {
         RenderNormal { normal: [ vector.x, vector.y, vector.z ]}
+    }
+}
+
+use cgmath::ApproxEq;
+
+impl ApproxEq for RenderVertex {
+    type Epsilon = f32;
+
+    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
+        self.pos[0].approx_eq_eps(&other.pos[0], epsilon)
+        && self.pos[1].approx_eq_eps(&other.pos[1], epsilon)
+        && self.pos[2].approx_eq_eps(&other.pos[2], epsilon)
+    }
+}
+
+impl ApproxEq for RenderNormal {
+    type Epsilon = f32;
+
+    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
+        self.normal[0].approx_eq_eps(&other.normal[0], epsilon)
+        && self.normal[1].approx_eq_eps(&other.normal[1], epsilon)
+        && self.normal[2].approx_eq_eps(&other.normal[2], epsilon)
     }
 }
 

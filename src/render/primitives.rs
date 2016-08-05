@@ -2,28 +2,20 @@ use glium::backend::Facade;
 use glium;
 use render::*;
 use cgmath::*;
+use geometry::*;
 
-
-
-pub fn weighted_vertex_normals(vertices: &[RenderVertex], triangle_indices: &[u32]) -> Vec<RenderNormal> {
-    // TODO: Implement a more formal SurfaceMesh struct to hold surface triangulations.
-    assert!(triangle_indices.len() % 3 == 0);
-
-    let num_triangles = triangle_indices.len() / 3;
-
+pub fn weighted_vertex_normals(mesh: &SurfaceMesh<f32>) -> Vec<RenderNormal> {
     let mut vertex_normals: Vec<Vector3<f32>> = Vec::new();
-    vertex_normals.resize(num_triangles, Vector3::zero());
+    vertex_normals.resize(mesh.num_vertices(), Vector3::zero());
 
-    for k in 0..num_triangles {
-        // Vertex indices
-        let a_index = triangle_indices[3 * k] as usize;
-        let b_index = triangle_indices[3 * k + 1] as usize;
-        let c_index = triangle_indices[3 * k + 2] as usize;
+    let vertices = mesh.vertices();
 
-        // Convert RenderVertices into Point3 instances
+    for triangle in mesh.triangles() {
+        let a_index = triangle.indices[0];
+        let b_index = triangle.indices[1];
+        let c_index = triangle.indices[2];
+
         let (a, b, c) = (vertices[a_index], vertices[b_index], vertices[c_index]);
-        let (a, b, c) = (Point3::from(a.pos), Point3::from(b.pos), Point3::from(c.pos));
-
         let ab = b - a;
         let ac = c - a;
 
@@ -39,21 +31,28 @@ pub fn weighted_vertex_normals(vertices: &[RenderVertex], triangle_indices: &[u3
 
     vertex_normals.iter()
         .map(|v| v.normalize())
-        .map(|v| RenderNormal::from(v))
+        .map(|v| RenderNormal::from(v.clone()))
         .collect()
 }
 
 pub fn build_renderable<F>(display: &F,
-    vertices: &[RenderVertex],
-    normals: &[RenderNormal],
-    triangle_indices: &[u32],)
+    mesh: &SurfaceMesh<f32>,
+    normals: &[RenderNormal])
     -> SceneRenderable where F: Facade {
 
-    let vertex_buffer = glium::VertexBuffer::new(display, vertices).unwrap();
-    let normal_buffer = glium::VertexBuffer::new(display, normals).unwrap();
+    let vertices: Vec<RenderVertex> = mesh.vertices().iter()
+        .map(|v| RenderVertex::from(v.clone()))
+        .collect();
+    let indices: Vec<u32> = mesh.triangles().iter()
+        .flat_map(|t| t.indices.iter())
+        .map(|i| i.clone() as u32)
+        .collect();
+
+    let vertex_buffer = glium::VertexBuffer::new(display, &vertices).unwrap();
+    let normal_buffer = glium::VertexBuffer::new(display, &normals).unwrap();
     let index_buffer = glium::IndexBuffer::new(display,
         glium::index::PrimitiveType::TrianglesList,
-        triangle_indices).unwrap();
+        &indices).unwrap();
 
     use std::rc::Rc;
     SceneRenderable {
@@ -63,62 +62,95 @@ pub fn build_renderable<F>(display: &F,
     }
 }
 
-pub fn build_triangle_renderable<F>(display: &F, a: Point3<f32>, b: Point3<f32>, c: Point3<f32>)
-    -> SceneRenderable where F: Facade {
-
-    let a = RenderVertex::from(a);
-    let b = RenderVertex::from(b);
-    let c = RenderVertex::from(c);
-
-    let vertices = vec!(a, b, c);
-    let indices = [0, 1, 2];
-    let normals = weighted_vertex_normals(&vertices, &indices);
-    build_renderable(display, &vertices, &normals, &indices)
-}
-
 pub fn build_tetrahedron_renderable<F>(display: &F,
     a: Point3<f32>, b: Point3<f32>, c: Point3<f32>, d: Point3<f32>)
      -> SceneRenderable where F: Facade {
 
-    // The faces of the tetrahedron are composed of the following vertex combinations,
-    // where the clockwise orientation of the vertices denote the normal direction.
-    //
-    // cba,
-    // abd,
-    // adc,
-    // bcd
+    let mesh = tetrahedron(a, b, c, d).replicate_vertices();
+    let normals = weighted_vertex_normals(&mesh);
 
-    // Don't share the vertices between faces,
-    // so that the vertex normal for each vertex is aligned
-    // with the face normal.
+    build_renderable(display, &mesh, &normals)
+}
 
-    let ab = b - a;
-    let ac = c - a;
-    let ad = d - a;
-    let bc = c - b;
-    let bd = d - b;
-    let ca = -ac;
-    let cb = -bc;
+pub fn build_icosahedron_renderable<F>(display: &F) -> SceneRenderable {
+    use geometry::icosahedron;
+    let mesh = icosahedron();
 
-    let cba_normal = RenderNormal::from(cb.cross(ca).normalize());
-    let abd_normal = RenderNormal::from(ab.cross(ad).normalize());
-    let adc_normal = RenderNormal::from(ad.cross(ac).normalize());
-    let bcd_normal = RenderNormal::from(bc.cross(bd).normalize());
+    // TODO: Remove clone() and instead implement proper .from() for references
+    let vertices = mesh.vertices().iter().map(|v| RenderVertex::from(v.clone()));
+    let indices: Vec<u32> = mesh.triangles().iter()
+                                .flat_map(|t| Vec::from(&t.indices as &[usize]))
+                                .map(|index| index as u32)
+                                .collect();
 
-    let a = RenderVertex::from(a);
-    let b = RenderVertex::from(b);
-    let c = RenderVertex::from(c);
-    let d = RenderVertex::from(d);
 
-    let vertices = vec!(c, b, a,
-                        a, b, d,
-                        a, d, c,
-                        b, c, d);
-    let normals = vec!(cba_normal, cba_normal, cba_normal,
-                       abd_normal, abd_normal, abd_normal,
-                       adc_normal, adc_normal, adc_normal,
-                       bcd_normal, bcd_normal, bcd_normal);
-    let indices: Vec<u32> = (0..12).collect();
 
-    build_renderable(display, &vertices, &normals, &indices)
+    unimplemented!()
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::weighted_vertex_normals;
+    use geometry::{SurfaceMesh, TriangleIndices};
+    use cgmath::{Point3, Vector3, ApproxEq};
+    use render::{RenderVertex, RenderNormal};
+
+    #[test]
+    fn weighted_vertex_normals_on_empty_mesh() {
+        let mesh = SurfaceMesh::from_indices(Vec::new(), Vec::new()).unwrap();
+        let normals = weighted_vertex_normals(&mesh);
+
+        assert!(normals.is_empty());
+    }
+
+    #[test]
+    fn weighted_vertex_normals_on_single_triangle() {
+        let vertices = vec![
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0)
+        ];
+        let indices = vec![TriangleIndices::new(0, 1, 2)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+        let normals = weighted_vertex_normals(&mesh);
+
+        let expected_normal = RenderNormal::new(0.0, 0.0, 1.0);
+
+        assert_eq!(3, normals.len());
+        assert_approx_eq!(expected_normal, normals[0]);
+        assert_approx_eq!(expected_normal, normals[1]);
+        assert_approx_eq!(expected_normal, normals[2]);
+    }
+
+    #[test]
+    fn weighted_vertex_normals_on_two_triangles_with_repeated_vertices() {
+        let vertices = vec![
+            // First triangle
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+
+            // Second triangle
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(1.0, 0.0, 1.0)
+        ];
+        let indices = vec![TriangleIndices::new(0, 1, 2), TriangleIndices::new(3, 4, 5)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+        let normals = weighted_vertex_normals(&mesh);
+
+        let expected_normal1 = RenderNormal::new(0.0, 0.0, 1.0);
+        let expected_normal2 = RenderNormal::new(0.0, 1.0, 0.0);
+
+        assert_eq!(6, normals.len());
+        assert_approx_eq!(expected_normal1, normals[0]);
+        assert_approx_eq!(expected_normal1, normals[1]);
+        assert_approx_eq!(expected_normal1, normals[2]);
+        assert_approx_eq!(expected_normal2, normals[3]);
+        assert_approx_eq!(expected_normal2, normals[4]);
+        assert_approx_eq!(expected_normal2, normals[5]);
+    }
+
+    // TODO: Test weighted_vertex_normals when vertices are not repeated
 }

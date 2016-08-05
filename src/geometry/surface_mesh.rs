@@ -36,9 +36,11 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
 
     pub fn vertices(&'a self) -> &'a Vec<Point3<S>> {
         &self.vertices
+        // TODO: Convert to iterator instead of Vec
     }
 
     pub fn triangles(&'a self) -> &'a Vec<TriangleIndices> {
+        // TODO: Convert to iterator instead of Vec
         &self.triangles
     }
 
