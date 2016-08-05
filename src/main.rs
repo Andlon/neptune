@@ -8,6 +8,7 @@ mod engine;
 mod render;
 mod store;
 mod input_manager;
+mod geometry;
 
 use engine::Engine;
 
