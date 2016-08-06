@@ -1,4 +1,5 @@
 use cgmath::*;
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct TriangleIndices {
@@ -72,6 +73,71 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
             .expect("Returned mesh should always be valid since it starts with a valid mesh.")
     }
 
+    pub fn subdivide_once(&self) -> Self {
+        let (new_vertices, midpoints) = extend_with_midpoints(self);
+
+        // When adding the midpoint vertices, there are now
+        // 6 vertices intersecting each triangle,
+        // so we may form a total of 4 new triangles for each triangle.
+        let triangles = self.triangles();
+        let new_triangles = triangles.iter()
+            .flat_map(|triangle| {
+                let (a, b, c) = (triangle.indices[0], triangle.indices[1], triangle.indices[2]);
+                let ab = midpoints.get(&sort_tuple((a, b))).unwrap().clone();
+                let ac = midpoints.get(&sort_tuple((a, c))).unwrap().clone();
+                let bc = midpoints.get(&sort_tuple((b, c))).unwrap().clone();
+
+                // It is quite inefficient to allocate a vector here,
+                // however fixed size arrays do not seem to support into_iter()?
+                // One could conceivably create an iterator that internally constructs
+                // a fixed-size array.
+                vec![
+                    TriangleIndices::new(a, ab, ac),
+                    TriangleIndices::new(ab, b, bc),
+                    TriangleIndices::new(bc, c, ac),
+                    TriangleIndices::new(ab, bc, ac)
+                ].into_iter()
+            }).collect();
+
+
+        SurfaceMesh::from_indices(new_vertices, new_triangles)
+            .expect("The subdivded mesh should always be valid.")
+    }
+}
+
+fn extend_with_midpoints<S>(mesh: &SurfaceMesh<S>) -> (Vec<Point3<S>>, HashMap<(usize, usize), usize>) where S: BaseNum {
+    let mut vertices = mesh.vertices().clone();
+    let mut midpoints: HashMap<(usize, usize), usize> = HashMap::new();
+
+    {
+        let mut insert_midpoint = |a: usize, b: usize| {
+            let index_pair = sort_tuple((a, b));
+            let entry = midpoints.entry(index_pair).or_insert(vertices.len());
+            if entry == &vertices.len() {
+                let midpoint = vertices[a].midpoint(vertices[b]);
+                vertices.push(midpoint)
+            }
+        };
+
+        for indices in mesh.triangles().iter().map(|triangle| triangle.indices) {
+            let (a, b, c) = (indices[0], indices[1], indices[2]);
+
+            insert_midpoint(a, b);
+            insert_midpoint(a, c);
+            insert_midpoint(b, c);
+        }
+    }
+
+    (vertices, midpoints)
+}
+
+#[inline]
+fn sort_tuple<T>((a, b): (T, T)) -> (T, T) where T: Ord {
+    if b < a {
+        (b, a)
+    } else {
+        (a, b)
+    }
 }
 
 #[cfg(test)]
@@ -124,5 +190,14 @@ mod tests {
         let replicated = mesh.replicate_vertices();
 
         assert_eq!(expected_mesh, replicated);
+    }
+
+    #[test]
+    fn subdivide_once_on_empty_mesh() {
+        let mesh: SurfaceMesh<f32> = SurfaceMesh::from_indices(Vec::new(), Vec::new()).unwrap();
+        let subdivided = mesh.subdivide_once();
+
+        assert!(subdivided.vertices().is_empty());
+        assert!(subdivided.triangles().is_empty());
     }
 }
