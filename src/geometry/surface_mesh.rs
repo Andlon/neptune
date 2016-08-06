@@ -189,6 +189,16 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
             .expect("Returned mesh should always be valid since it starts with a valid mesh.")
     }
 
+    pub fn subdivide(&self, times: u32) -> Self {
+        let mut mesh = self.clone();
+
+        for k in 0 .. times {
+            mesh = mesh.subdivide_once();
+        }
+
+        mesh
+    }
+
     pub fn subdivide_once(&self) -> Self {
         let (new_vertices, midpoints) = extend_with_midpoints(self);
 

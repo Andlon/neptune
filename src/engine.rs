@@ -36,25 +36,38 @@ impl Engine {
         let mut scene_renderer = SceneRenderer::new(&display);
         let mut input_manager = InputManager::new();
 
-        // Temporarily create a triangle entity here for testing
-        let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
-                            Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));
-        let triangle_entity = entity_manager.create();
-        let triangle_renderable = build_tetrahedron_renderable(&display, a, b, c, d);
-        let triangle_transform = SceneTransform {
-            position: Point3 { x: 0.0, y: 5.0, z: 0.0 }
-        };
-        scene_renderable_store.set_renderable(triangle_entity, triangle_renderable);
-        scene_transform_store.set_transform(triangle_entity, triangle_transform);
+        // Set up scene (temporarily here for simplicity, will of course be dynamically
+        // loaded later on).
+        {
+            // Temporarily create a triangle entity here for testing
+            let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
+                                Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));
+            let triangle_entity = entity_manager.create();
+            let triangle_renderable = build_tetrahedron_renderable(&display, a, b, c, d);
+            let triangle_transform = SceneTransform {
+                position: Point3 { x: 0.0, y: 5.0, z: 0.0 }
+            };
+            scene_renderable_store.set_renderable(triangle_entity, triangle_renderable);
+            scene_transform_store.set_transform(triangle_entity, triangle_transform);
 
-        // Also create an icosahedron
-        let ico_entity = entity_manager.create();
-        let ico_renderable = build_icosahedron_renderable(&display);
-        let ico_transform = SceneTransform {
-            position: Point3 { x: 0.0, y: 15.0, z: 0.0 }
-        };
-        scene_renderable_store.set_renderable(ico_entity, ico_renderable);
-        scene_transform_store.set_transform(ico_entity, ico_transform);
+            // Also create an icosahedron
+            let ico_entity = entity_manager.create();
+            let ico_renderable = build_icosahedron_renderable(&display);
+            let ico_transform = SceneTransform {
+                position: Point3 { x: 0.0, y: 15.0, z: 0.0 }
+            };
+            scene_renderable_store.set_renderable(ico_entity, ico_renderable);
+            scene_transform_store.set_transform(ico_entity, ico_transform);
+
+            // And a unit sphere
+            let sphere_entity = entity_manager.create();
+            let sphere_renderable = build_unit_sphere_renderable(&display, 4);
+            let sphere_transform = SceneTransform {
+                position: Point3 { x: 0.0, y: 15.0, z: 5.0 }
+            };
+            scene_renderable_store.set_renderable(sphere_entity, sphere_renderable);
+            scene_transform_store.set_transform(sphere_entity, sphere_transform);
+        }
 
         loop {
             // Move this into a window manager or something too

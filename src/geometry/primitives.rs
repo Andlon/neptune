@@ -72,3 +72,16 @@ pub fn icosahedron() -> SurfaceMesh<f32> {
     SurfaceMesh::from_indices(vertices, indices)
         .expect("Triangle indices should all be valid.")
 }
+
+pub fn unit_sphere(num_subdivisions: u32) -> SurfaceMesh<f32> {
+    // Generate an icosphere
+    let mesh = icosahedron().subdivide(num_subdivisions);
+
+    // Normalize each vertex such that it lies on the unit sphere
+    let normalized_vertices: Vec<Point3<f32>> = mesh.vertices().iter()
+                                 .map(|v| Point3::from_vec(v.to_vec().normalize()))
+                                 .collect();
+
+    SurfaceMesh::from_indices(normalized_vertices, Vec::from(mesh.triangle_indices()))
+        .expect("Triangle indices should all be valid")
+}

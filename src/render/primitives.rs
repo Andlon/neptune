@@ -80,6 +80,17 @@ pub fn build_icosahedron_renderable<F>(display: &F) -> SceneRenderable where F: 
     build_renderable(display, &mesh, &normals)
 }
 
+pub fn build_unit_sphere_renderable<F>(display: &F, num_subdivisions: u32)
+    -> SceneRenderable where F: Facade {
+
+    let mesh = unit_sphere(num_subdivisions);
+    let normals: Vec<RenderNormal> = mesh.vertices().iter()
+                                 .map(|v| v.to_vec())
+                                 .map(|v| RenderNormal::from(v))
+                                 .collect();
+    build_renderable(display, &mesh, &normals)
+}
+
 #[cfg(test)]
 mod tests {
 
