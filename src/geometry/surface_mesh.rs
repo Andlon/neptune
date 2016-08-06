@@ -22,6 +22,16 @@ pub struct Triangle<S> where S: BaseNum {
     pub c: Point3<S>
 }
 
+impl<S> ApproxEq for Triangle<S> where S: BaseFloat {
+    type Epsilon = S;
+
+    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
+        self.a.approx_eq_eps(&other.a, epsilon)
+        && self.b.approx_eq_eps(&other.b, epsilon)
+        && self.c.approx_eq_eps(&other.c, epsilon)
+    }
+}
+
 impl<S> Triangle<S> where S: BaseNum {
     pub fn new(a: Point3<S>, b: Point3<S>, c: Point3<S>) -> Triangle<S> {
         Triangle { a: a, b: b, c: c }
@@ -60,6 +70,19 @@ pub struct NormalizedSurfaceMesh<S> where S: BaseNum {
     triangles: Vec<Triangle<S>>
 }
 
+impl<S> ApproxEq for NormalizedSurfaceMesh<S> where S: BaseFloat {
+    type Epsilon = S;
+
+    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
+        if self.triangles.len() == other.triangles.len() {
+            let mut pairs = self.triangles.iter().zip(other.triangles.iter());
+            pairs.all(|(&tri1, &tri2)| tri1.approx_eq_eps(&tri2, epsilon))
+        } else {
+            false
+        }
+    }
+}
+
 // TODO: A better approach to this floating point sorting mess would be something like
 // implementing a floating point wrapper type that guarantees that the float is finite,
 // in which case sorting is well-defined.
@@ -87,8 +110,13 @@ impl<'a, S> From<&'a SurfaceMesh<S>> for NormalizedSurfaceMesh<S> where S: BaseN
             let a_ordering = partially_compare_points(tri1.a, tri2.a);
             let b_ordering = partially_compare_points(tri1.b, tri2.b);
             let c_ordering = partially_compare_points(tri1.c, tri2.c);
-            a_ordering.and(b_ordering).and(c_ordering)
-                .expect("Coordinates must be finite.")
+
+            let orderings: [Option<Ordering>; 3] = [a_ordering, b_ordering, c_ordering];
+            orderings.iter()
+                     .skip_while(|&ordering| ordering == &Some(Ordering::Equal))
+                     .next()
+                     .unwrap_or(&Some(Ordering::Equal))
+                     .expect("Coordinates must be finite.")
         });
 
         NormalizedSurfaceMesh {
@@ -181,8 +209,8 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
                 // a fixed-size array.
                 vec![
                     TriangleIndices::new(a, ab, ac),
-                    TriangleIndices::new(ab, b, bc),
-                    TriangleIndices::new(bc, c, ac),
+                    TriangleIndices::new(b, bc, ab),
+                    TriangleIndices::new(c, ac, bc),
                     TriangleIndices::new(ab, bc, ac)
                 ].into_iter()
             }).collect();
@@ -231,6 +259,7 @@ fn sort_tuple<T>((a, b): (T, T)) -> (T, T) where T: Ord {
 mod tests {
     use super::{SurfaceMesh, TriangleIndices, NormalizedSurfaceMesh, Triangle};
     use cgmath::Point3;
+    use cgmath::ApproxEq;
 
     #[test]
     fn normalized_empty_mesh() {
@@ -345,4 +374,49 @@ mod tests {
         assert!(subdivided.vertices().is_empty());
         assert!(subdivided.triangle_indices().is_empty());
     }
+
+    #[test]
+    fn subdivide_once_on_single_triangle() {
+        let a = Point3::new(0.0, 0.0, 0.0);
+        let b = Point3::new(0.0, 1.0, 0.0);
+        let c = Point3::new(0.0, 0.0, 1.0);
+
+        let vertices = vec![a, b, c];
+        let indices = vec![TriangleIndices::new(0, 1, 2)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+
+        let subdivided = mesh.subdivide_once();
+        let normalized = NormalizedSurfaceMesh::from(&subdivided);
+
+        let ab = Point3::new(0.0, 0.5, 0.0);
+        let ac = Point3::new(0.0, 0.0, 0.5);
+        let bc = Point3::new(0.0, 0.5, 0.5);
+
+        // Note: We need to preserve orientation of each triangle.
+        // NormalizedSurfaceMesh does not change the order of the vertices within
+        // each triangle, so we need to make sure we get the order right.
+        // Currently we rely on the internals of subdivide_once to figure out
+        // the correct order. A better approach would be to implement routines
+        // that would let us compare SurfaceMeshes where orientation is taken into
+        // account, without requiring exact, but this is rather a lot of work
+        // in its own right.
+
+        let expected_triangles = vec![
+            Triangle::new(a, ab, ac),
+            Triangle::new(c, ac, bc),
+            Triangle::new(ab, bc, ac),
+            Triangle::new(b, bc, ab),
+        ];
+
+        // Assert each individual triangle so that it is easier to debug
+        assert_eq!(4, normalized.triangles.len());
+        assert_approx_eq!(expected_triangles[0], normalized.triangles[0]);
+        assert_approx_eq!(expected_triangles[1], normalized.triangles[1]);
+        assert_approx_eq!(expected_triangles[2], normalized.triangles[2]);
+        assert_approx_eq!(expected_triangles[3], normalized.triangles[3]);
+    }
+
+    // TODO: Need more tests for almost everything here. In particular,
+    // a better way to compare triangulations would be nice. Also,
+    // need more tests for subdivide.
 }
