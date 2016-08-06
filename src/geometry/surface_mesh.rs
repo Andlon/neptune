@@ -1,5 +1,6 @@
 use cgmath::*;
 use std::collections::HashMap;
+use std::cmp::Ordering;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct TriangleIndices {
@@ -21,6 +22,12 @@ pub struct Triangle<S> where S: BaseNum {
     pub c: Point3<S>
 }
 
+impl<S> Triangle<S> where S: BaseNum {
+    pub fn new(a: Point3<S>, b: Point3<S>, c: Point3<S>) -> Triangle<S> {
+        Triangle { a: a, b: b, c: c }
+    }
+}
+
 use std::slice::Iter;
 pub struct TriangleIter<'a, S> where S: 'a + BaseNum {
     vertices: &'a [Point3<S>],
@@ -39,6 +46,54 @@ impl <'a, S> Iterator for TriangleIter<'a, S> where S: BaseNum {
                     c: self.vertices[indices[2]]
                 }
             })
+    }
+}
+
+/// For any given geometry, there are many ways to represent it
+/// using SurfaceMesh, since the vertices and triangles can be
+/// numbered in many different ways. The purpose of NormalizedSurfaceMesh
+/// is to provide a representation that is unambiguous, in the sense that
+/// any two equivalent geometrical configurations will have the same
+/// normalized representation, independent of vertex and triangle numbering.
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub struct NormalizedSurfaceMesh<S> where S: BaseNum {
+    triangles: Vec<Triangle<S>>
+}
+
+// TODO: A better approach to this floating point sorting mess would be something like
+// implementing a floating point wrapper type that guarantees that the float is finite,
+// in which case sorting is well-defined.
+fn partially_compare_points<S>(a: Point3<S>, b: Point3<S>) -> Option<Ordering>
+    where S: BaseNum + PartialOrd {
+
+    let a: [S; 3] = a.into();
+    let b: [S; 3] = b.into();
+
+    // While components are pairwise equal, or they fail to compare,
+    // compare the next pair. If any are Less or Greater, stop and use
+    // that ordering. If all three components are Equal, return an Ordering::Equal
+    // (wrapped in an Option).
+    let pairs = a.iter().zip(b.iter());
+    pairs.map(|(x_a, x_b)| x_a.partial_cmp(x_b))
+         .skip_while(|ordering| ordering == &Some(Ordering::Equal))
+         .next()
+         .unwrap_or(Some(Ordering::Equal))
+}
+
+impl<'a, S> From<&'a SurfaceMesh<S>> for NormalizedSurfaceMesh<S> where S: BaseNum + PartialOrd {
+    fn from(mesh: &'a SurfaceMesh<S>) -> Self {
+        let mut triangles: Vec<Triangle<S>> = mesh.triangles().collect();
+        triangles.sort_by(|tri1, tri2| {
+            let a_ordering = partially_compare_points(tri1.a, tri2.a);
+            let b_ordering = partially_compare_points(tri1.b, tri2.b);
+            let c_ordering = partially_compare_points(tri1.c, tri2.c);
+            a_ordering.and(b_ordering).and(c_ordering)
+                .expect("Coordinates must be finite.")
+        });
+
+        NormalizedSurfaceMesh {
+            triangles: triangles
+        }
     }
 }
 
@@ -174,7 +229,69 @@ fn sort_tuple<T>((a, b): (T, T)) -> (T, T) where T: Ord {
 
 #[cfg(test)]
 mod tests {
-    use super::{SurfaceMesh, TriangleIndices};
+    use super::{SurfaceMesh, TriangleIndices, NormalizedSurfaceMesh, Triangle};
+    use cgmath::Point3;
+
+    #[test]
+    fn normalized_empty_mesh() {
+        let mesh: SurfaceMesh<f32> = SurfaceMesh::from_indices(Vec::new(), Vec::new()).unwrap();
+        let normalized = NormalizedSurfaceMesh::from(&mesh);
+
+        assert!(normalized.triangles.is_empty());
+    }
+
+    #[test]
+    fn normalized_single_triangle() {
+        let a = Point3::new(0.0, 0.0, 0.0);
+        let b = Point3::new(0.0, 1.0, 0.0);
+        let c = Point3::new(0.0, 0.0, 1.0);
+
+        let vertices = vec![a, b, c];
+        let indices = vec![TriangleIndices::new(0, 1, 2)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+
+        let normalized = NormalizedSurfaceMesh::from(&mesh);
+
+        let expected_triangles = vec![Triangle::new(a, b, c)];
+
+        assert_eq!(expected_triangles, normalized.triangles);
+    }
+
+    #[test]
+    fn normalized_two_triangles_already_ordered() {
+        let a = Point3::new(0.0, 0.0, 0.0);
+        let b = Point3::new(0.0, 1.0, 0.0);
+        let c = Point3::new(1.0, 0.0, 0.0);
+        let d = Point3::new(1.0, 1.0, 0.0);
+
+        let vertices = vec![a, b, c, d];
+        let indices = vec![TriangleIndices::new(0, 1, 2), TriangleIndices::new(1, 2, 3)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+
+        let normalized = NormalizedSurfaceMesh::from(&mesh);
+        let expected_triangles = vec![Triangle::new(a, b, c), Triangle::new(b, c, d)];
+
+        assert_eq!(expected_triangles, normalized.triangles);
+    }
+
+    #[test]
+    fn normalized_two_triangles_unordered() {
+        // In this case, the normalization procedure is expected
+        // to swap the ordering of the triangles
+        let a = Point3::new(0.0, 0.0, 0.0);
+        let b = Point3::new(0.0, 1.0, 0.0);
+        let c = Point3::new(1.0, 0.0, 0.0);
+        let d = Point3::new(1.0, 1.0, 0.0);
+
+        let vertices = vec![a, b, c, d];
+        let indices = vec![TriangleIndices::new(1, 2, 3), TriangleIndices::new(0, 1, 2)];
+        let mesh = SurfaceMesh::from_indices(vertices, indices).unwrap();
+
+        let normalized = NormalizedSurfaceMesh::from(&mesh);
+        let expected_triangles = vec![Triangle::new(a, b, c), Triangle::new(b, c, d)];
+
+        assert_eq!(expected_triangles, normalized.triangles);
+    }
 
     #[test]
     fn replicate_vertices_on_empty_mesh() {
@@ -187,8 +304,6 @@ mod tests {
 
     #[test]
     fn replicate_vertices_on_single_triangle() {
-        use cgmath::Point3;
-
         let a = Point3::new(0.0, 0.0, 0.0);
         let b = Point3::new(0.0, 1.0, 0.0);
         let c = Point3::new(0.0, 0.0, 1.0);
@@ -204,8 +319,6 @@ mod tests {
 
     #[test]
     fn replicate_vertices_on_two_triangles() {
-        use cgmath::Point3;
-
         let a = Point3::new(0.0, 0.0, 0.0);
         let b = Point3::new(0.0, 1.0, 0.0);
         let c = Point3::new(1.0, 0.0, 0.0);
