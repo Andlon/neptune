@@ -14,6 +14,34 @@ impl TriangleIndices {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct Triangle<S> where S: BaseNum {
+    pub a: Point3<S>,
+    pub b: Point3<S>,
+    pub c: Point3<S>
+}
+
+use std::slice::Iter;
+pub struct TriangleIter<'a, S> where S: 'a + BaseNum {
+    vertices: &'a [Point3<S>],
+    index_iter: Iter<'a, TriangleIndices>
+}
+
+impl <'a, S> Iterator for TriangleIter<'a, S> where S: BaseNum {
+    type Item = Triangle<S>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index_iter.next()
+            .map(|triangle_indices| {
+                let indices = triangle_indices.indices;
+                Triangle {
+                    a: self.vertices[indices[0]],
+                    b: self.vertices[indices[1]],
+                    c: self.vertices[indices[2]]
+                }
+            })
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct SurfaceMesh<S> where S: BaseNum {
     vertices: Vec<Point3<S>>,
@@ -35,14 +63,19 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
         }
     }
 
-    pub fn vertices(&'a self) -> &'a Vec<Point3<S>> {
-        &self.vertices
-        // TODO: Convert to iterator instead of Vec
+    pub fn vertices(&'a self) -> &'a [Point3<S>] {
+        &self.vertices[..]
     }
 
-    pub fn triangles(&'a self) -> &'a Vec<TriangleIndices> {
-        // TODO: Convert to iterator instead of Vec
-        &self.triangles
+    pub fn triangle_indices(&'a self) -> &'a [TriangleIndices] {
+        &self.triangles[..]
+    }
+
+    pub fn triangles(&'a self) -> TriangleIter<'a, S> {
+        TriangleIter {
+            vertices: self.vertices(),
+            index_iter: self.triangle_indices().iter()
+        }
     }
 
     pub fn num_vertices(&self) -> usize {
@@ -57,7 +90,7 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
     /// where each vertex position is repeated such that every vertex is associated
     /// with exactly one triangle.
     pub fn replicate_vertices(&self) -> SurfaceMesh<S> {
-        let vertices: Vec<Point3<S>> = self.triangles().iter()
+        let vertices: Vec<Point3<S>> = self.triangle_indices().iter()
             .flat_map(|triangle| {
                 triangle.indices.iter()
                         .map(|index| self.vertices()[index.clone()])
@@ -79,7 +112,7 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
         // When adding the midpoint vertices, there are now
         // 6 vertices intersecting each triangle,
         // so we may form a total of 4 new triangles for each triangle.
-        let triangles = self.triangles();
+        let triangles = self.triangle_indices();
         let new_triangles = triangles.iter()
             .flat_map(|triangle| {
                 let (a, b, c) = (triangle.indices[0], triangle.indices[1], triangle.indices[2]);
@@ -99,14 +132,13 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
                 ].into_iter()
             }).collect();
 
-
         SurfaceMesh::from_indices(new_vertices, new_triangles)
             .expect("The subdivded mesh should always be valid.")
     }
 }
 
 fn extend_with_midpoints<S>(mesh: &SurfaceMesh<S>) -> (Vec<Point3<S>>, HashMap<(usize, usize), usize>) where S: BaseNum {
-    let mut vertices = mesh.vertices().clone();
+    let mut vertices = Vec::from(mesh.vertices());
     let mut midpoints: HashMap<(usize, usize), usize> = HashMap::new();
 
     {
@@ -119,7 +151,7 @@ fn extend_with_midpoints<S>(mesh: &SurfaceMesh<S>) -> (Vec<Point3<S>>, HashMap<(
             }
         };
 
-        for indices in mesh.triangles().iter().map(|triangle| triangle.indices) {
+        for indices in mesh.triangle_indices().iter().map(|triangle| triangle.indices) {
             let (a, b, c) = (indices[0], indices[1], indices[2]);
 
             insert_midpoint(a, b);
@@ -150,7 +182,7 @@ mod tests {
         let replicated = mesh.replicate_vertices();
 
         assert!(replicated.vertices().is_empty());
-        assert!(replicated.triangles().is_empty());
+        assert!(replicated.triangle_indices().is_empty());
     }
 
     #[test]
@@ -198,6 +230,6 @@ mod tests {
         let subdivided = mesh.subdivide_once();
 
         assert!(subdivided.vertices().is_empty());
-        assert!(subdivided.triangles().is_empty());
+        assert!(subdivided.triangle_indices().is_empty());
     }
 }

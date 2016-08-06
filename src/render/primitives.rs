@@ -10,7 +10,7 @@ pub fn weighted_vertex_normals(mesh: &SurfaceMesh<f32>) -> Vec<RenderNormal> {
 
     let vertices = mesh.vertices();
 
-    for triangle in mesh.triangles() {
+    for triangle in mesh.triangle_indices() {
         let a_index = triangle.indices[0];
         let b_index = triangle.indices[1];
         let c_index = triangle.indices[2];
@@ -43,7 +43,7 @@ pub fn build_renderable<F>(display: &F,
     let vertices: Vec<RenderVertex> = mesh.vertices().iter()
         .map(|v| RenderVertex::from(v.clone()))
         .collect();
-    let indices: Vec<u32> = mesh.triangles().iter()
+    let indices: Vec<u32> = mesh.triangle_indices().iter()
         .flat_map(|t| t.indices.iter())
         .map(|i| i.clone() as u32)
         .collect();
