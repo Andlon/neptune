@@ -41,12 +41,12 @@ impl Engine {
             frame.finish();
 
             let messages = window.check_events();
-            self.dispatch_messages(&messages, &mut systems);
+            self.dispatch_messages(messages, &mut systems);
         }
     }
 
-    fn dispatch_messages(&mut self, messages: &[Message], systems: &mut Systems) {
-        let mut messages = Vec::from(messages);
+    fn dispatch_messages(&mut self, messages: Vec<Message>, systems: &mut Systems) {
+        let mut messages = messages;
 
         while !messages.is_empty() {
             let mut response = Vec::new();
