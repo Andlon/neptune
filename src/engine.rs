@@ -1,69 +1,92 @@
 use entity::{Entity, EntityManager};
 use render::*;
 use input_manager::InputManager;
-
-use cgmath::{Vector3, Point3};
-
-enum Event {
-    Quit,
-}
+use message::{Message, MessageReceiver};
+use camera_controller::CameraController;
 
 pub struct Engine {
-
+    should_continue: bool
 }
 
-pub struct Stores {
+pub struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: SceneTransformStore
+}
+
+pub struct Systems {
+    pub scene: SceneRenderer,
+    pub input: InputManager,
+    pub camera: CameraController,
 }
 
 impl Engine {
 
     pub fn new() -> Engine {
-        Engine { }
+        Engine { should_continue: true }
     }
 
     pub fn run(&mut self) {
-        // Set up stores
-        let mut entity_manager = EntityManager::new();
-        let mut stores = prepare_stores();
-
         let window = Window::new();
 
-        // Set up systems
-        let mut scene_renderer = SceneRenderer::new(&window);
-        let mut input_manager = InputManager::new();
+        let mut entity_manager = EntityManager::new();
+        let mut stores = prepare_component_stores();
+        let mut systems = prepare_systems(&window);
 
         initialize_scene(&window, &mut entity_manager, &mut stores);
 
-        loop {
+        while self.should_continue {
+            // Render
             let mut frame = window.begin_frame();
-            scene_renderer.render(&mut frame, &stores.scene, &stores.transform);
-            frame.finish()
+            systems.scene.render(&mut frame, systems.camera.camera(), &stores.scene, &stores.transform);
+            frame.finish();
 
-            // for ev in display.poll_events() {
-            //     match ev {
-            //         glium::glutin::Event::Closed => return,
-            //         glium::glutin::Event::KeyboardInput(state, _, vkcode) => {
-            //             if let Some(vkcode) = vkcode {
-            //                 input_manager.handle_keyboard_input(&mut scene_renderer, state, vkcode);
-            //             }
-            //         },
-            //         _ => ()
-            //     }
-            // }
+            let messages = window.check_events();
+            self.dispatch_messages(&messages, &mut systems);
         }
     }
+
+    fn dispatch_messages(&mut self, messages: &[Message], systems: &mut Systems) {
+        let mut messages = Vec::from(messages);
+
+        while !messages.is_empty() {
+            let mut response = Vec::new();
+            response.extend(systems.input.process_messages(&messages));
+            response.extend(systems.camera.process_messages(&messages));
+
+            for message in messages {
+                match message {
+                    Message::WindowClosed => self.should_continue = false,
+                    _ => ()
+                };
+            }
+
+            messages = response.clone();
+        }
+    }
+
+
 }
 
-fn prepare_stores() -> Stores {
-    Stores {
+fn prepare_component_stores() -> ComponentStores {
+    ComponentStores {
         scene: SceneRenderableStore::new(),
         transform: SceneTransformStore::new()
     }
 }
 
-fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut Stores) {
+fn prepare_systems(window: &Window) -> Systems {
+    use cgmath::{Point3, Vector3, EuclideanSpace};
+    let default_camera = Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap();
+    Systems {
+        scene: SceneRenderer::new(window),
+        input: InputManager::new(),
+        camera: CameraController::from(default_camera)
+    }
+}
+
+fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores) {
+    use cgmath::Point3;
+
     // Create a tetrahedron
     let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
                         Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));

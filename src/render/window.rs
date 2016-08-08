@@ -1,6 +1,7 @@
 use glium;
 use glium::backend::glutin_backend::GlutinFacade;
 use glium::Surface;
+use message::Message;
 
 pub struct Frame {
     pub internal_frame: glium::Frame,
@@ -34,5 +35,21 @@ impl Window {
         let mut frame = Frame { internal_frame: self.display.draw() };
         frame.internal_frame.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
         frame
+    }
+
+    pub fn check_events(&self) -> Vec<Message> {
+        let mut messages = Vec::new();
+        for event in self.display.poll_events() {
+            match event {
+                glium::glutin::Event::Closed => messages.push(Message::WindowClosed),
+                glium::glutin::Event::KeyboardInput(state, _, opt_vk) => {
+                    if let Some(vk) = opt_vk {
+                        messages.push(Message::KeyboardInputReceived(state, vk));
+                    }
+                }
+                _ => ()
+            }
+        }
+        messages
     }
 }

@@ -9,6 +9,8 @@ mod render;
 mod store;
 mod input_manager;
 mod geometry;
+mod message;
+mod camera_controller;
 
 use engine::Engine;
 

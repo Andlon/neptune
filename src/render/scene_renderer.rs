@@ -34,7 +34,6 @@ fn model_matrix(position: &Point3<f32>) -> [[f32; 4]; 4] {
 
 pub struct SceneRenderer {
     program: glium::Program,
-    pub camera: Camera,
 }
 
 impl SceneRenderer {
@@ -91,13 +90,13 @@ impl SceneRenderer {
             None).unwrap();
 
         SceneRenderer {
-            program: program,
-            camera: Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap()
+            program: program
         }
     }
 
     pub fn render(&mut self,
         frame: &mut Frame,
+        camera: Camera,
         renderable_store: &SceneRenderableStore,
         transform_store: &SceneTransformStore)
     {
@@ -111,7 +110,7 @@ impl SceneRenderer {
             .. Default::default()
         };
 
-        let view_matrix = self.camera.view_matrix();
+        let view_matrix = camera.view_matrix();
         let view: [[f32; 4]; 4] = view_matrix.into();
         let perspective = perspective_matrix(surface);
 
