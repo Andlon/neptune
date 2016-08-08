@@ -35,11 +35,12 @@ pub fn weighted_vertex_normals(mesh: &SurfaceMesh<f32>) -> Vec<RenderNormal> {
         .collect()
 }
 
-pub fn build_renderable<F>(display: &F,
+pub fn build_renderable(window: &Window,
     mesh: &SurfaceMesh<f32>,
     normals: &[RenderNormal])
-    -> SceneRenderable where F: Facade {
+    -> SceneRenderable {
 
+    let display = &window.display;
     let vertices: Vec<RenderVertex> = mesh.vertices().iter()
         .map(|v| RenderVertex::from(v.clone()))
         .collect();
@@ -62,33 +63,33 @@ pub fn build_renderable<F>(display: &F,
     }
 }
 
-pub fn build_tetrahedron_renderable<F>(display: &F,
+pub fn tetrahedron_renderable(window: &Window,
     a: Point3<f32>, b: Point3<f32>, c: Point3<f32>, d: Point3<f32>)
-     -> SceneRenderable where F: Facade {
+     -> SceneRenderable {
 
     let mesh = tetrahedron(a, b, c, d).replicate_vertices();
     let normals = weighted_vertex_normals(&mesh);
 
-    build_renderable(display, &mesh, &normals)
+    build_renderable(window, &mesh, &normals)
 }
 
-pub fn build_icosahedron_renderable<F>(display: &F) -> SceneRenderable where F: Facade {
+pub fn icosahedron_renderable(window: &Window) -> SceneRenderable {
     use geometry::icosahedron;
     let mesh = icosahedron().replicate_vertices();
     let normals = weighted_vertex_normals(&mesh);
 
-    build_renderable(display, &mesh, &normals)
+    build_renderable(window, &mesh, &normals)
 }
 
-pub fn build_unit_sphere_renderable<F>(display: &F, num_subdivisions: u32)
-    -> SceneRenderable where F: Facade {
+pub fn unit_sphere_renderable(window: &Window, num_subdivisions: u32)
+    -> SceneRenderable {
 
     let mesh = unit_sphere(num_subdivisions);
     let normals: Vec<RenderNormal> = mesh.vertices().iter()
                                  .map(|v| v.to_vec())
                                  .map(|v| RenderNormal::from(v))
                                  .collect();
-    build_renderable(display, &mesh, &normals)
+    build_renderable(window, &mesh, &normals)
 }
 
 #[cfg(test)]

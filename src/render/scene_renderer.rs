@@ -1,8 +1,6 @@
 use glium::{Surface, VertexBuffer, IndexBuffer};
-use glium::backend::Facade;
 use glium;
 use render::*;
-
 use cgmath::*;
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
@@ -40,7 +38,7 @@ pub struct SceneRenderer {
 }
 
 impl SceneRenderer {
-    pub fn new<F>(display: &F) -> SceneRenderer where F: Facade {
+    pub fn new(window: &Window) -> SceneRenderer {
         let vertex_shader_src = r#"
             #version 140
             in vec3 pos;
@@ -86,6 +84,7 @@ impl SceneRenderer {
             }
         "#;
 
+        let display = &window.display;
         let program = glium::Program::from_source(display,
             vertex_shader_src,
             fragment_shader_src,
@@ -97,11 +96,12 @@ impl SceneRenderer {
         }
     }
 
-    pub fn render<S: Surface>(&mut self,
+    pub fn render(&mut self,
+        frame: &mut Frame,
         renderable_store: &SceneRenderableStore,
-        transform_store: &SceneTransformStore,
-        surface: &mut S)
+        transform_store: &SceneTransformStore)
     {
+        let surface = &mut frame.internal_frame;
         let params = glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::draw_parameters::DepthTest::IfLess,

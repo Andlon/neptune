@@ -1,7 +1,5 @@
 use entity::{Entity, EntityManager};
 use render::*;
-use glium;
-use glium::backend::Facade;
 use input_manager::InputManager;
 
 use cgmath::{Vector3, Point3};
@@ -26,14 +24,10 @@ impl Engine {
         let mut scene_renderable_store = SceneRenderableStore::new();
         let mut scene_transform_store = SceneTransformStore::new();
 
-        // Move this into a WindowManager or similar
-        use glium::{DisplayBuild, Surface};
-        let display = glium::glutin::WindowBuilder::new()
-            .with_depth_buffer(24)
-            .build_glium().unwrap();
+        let window = Window::new();
 
         // Set up systems
-        let mut scene_renderer = SceneRenderer::new(&display);
+        let mut scene_renderer = SceneRenderer::new(&window);
         let mut input_manager = InputManager::new();
 
         // Set up scene (temporarily here for simplicity, will of course be dynamically
@@ -43,7 +37,7 @@ impl Engine {
             let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
                                 Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));
             let triangle_entity = entity_manager.create();
-            let triangle_renderable = build_tetrahedron_renderable(&display, a, b, c, d);
+            let triangle_renderable = tetrahedron_renderable(&window, a, b, c, d);
             let triangle_transform = SceneTransform {
                 position: Point3 { x: 0.0, y: 5.0, z: 0.0 }
             };
@@ -52,7 +46,7 @@ impl Engine {
 
             // Also create an icosahedron
             let ico_entity = entity_manager.create();
-            let ico_renderable = build_icosahedron_renderable(&display);
+            let ico_renderable = icosahedron_renderable(&window);
             let ico_transform = SceneTransform {
                 position: Point3 { x: 0.0, y: 15.0, z: 0.0 }
             };
@@ -61,7 +55,7 @@ impl Engine {
 
             // And a unit sphere
             let sphere_entity = entity_manager.create();
-            let sphere_renderable = build_unit_sphere_renderable(&display, 4);
+            let sphere_renderable = unit_sphere_renderable(&window, 4);
             let sphere_transform = SceneTransform {
                 position: Point3 { x: 0.0, y: 15.0, z: 5.0 }
             };
@@ -70,25 +64,21 @@ impl Engine {
         }
 
         loop {
-            // Move this into a window manager or something too
-            let mut target = display.draw();
-            target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
+            let mut frame = window.begin_frame();
+            scene_renderer.render(&mut frame, &scene_renderable_store, &scene_transform_store);
+            frame.finish()
 
-            scene_renderer.render(&scene_renderable_store, &scene_transform_store, &mut target);
-
-            target.finish().unwrap();
-
-            for ev in display.poll_events() {
-                match ev {
-                    glium::glutin::Event::Closed => return,
-                    glium::glutin::Event::KeyboardInput(state, _, vkcode) => {
-                        if let Some(vkcode) = vkcode {
-                            input_manager.handle_keyboard_input(&mut scene_renderer, state, vkcode);
-                        }
-                    },
-                    _ => ()
-                }
-            }
+            // for ev in display.poll_events() {
+            //     match ev {
+            //         glium::glutin::Event::Closed => return,
+            //         glium::glutin::Event::KeyboardInput(state, _, vkcode) => {
+            //             if let Some(vkcode) = vkcode {
+            //                 input_manager.handle_keyboard_input(&mut scene_renderer, state, vkcode);
+            //             }
+            //         },
+            //         _ => ()
+            //     }
+            // }
         }
     }
 }
