@@ -6,3 +6,4 @@ authors = ["Andreas Longva <andreas.b.longva@gmail.com>"]
 [dependencies]
 glium = "*"
 cgmath = "*"
+time = "0.1.35"

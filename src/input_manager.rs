@@ -1,5 +1,6 @@
 use glium::glutin::{ElementState, VirtualKeyCode};
 use message::{Message, MessageReceiver};
+use camera_controller::CameraAction;
 
 pub struct InputManager;
 
@@ -15,37 +16,41 @@ impl InputManager {
         vkcode: VirtualKeyCode)
         -> Vec<Message>
     {
-        use glium::glutin::VirtualKeyCode;
-        use camera_controller::CameraAction;
+        let camera = |action| Some(Message::CameraCommand(action));
+        let pressed = state == ElementState::Pressed;
+        let released = state == ElementState::Released;
 
-        let mut messages = Vec::new();
-        if state == ElementState::Pressed {
-            let response = match vkcode {
-                VirtualKeyCode::W => Some(Message::CameraCommand(CameraAction::TranslateForward)),
-                VirtualKeyCode::S => Some(Message::CameraCommand(CameraAction::TranslateBackward)),
-                VirtualKeyCode::D => Some(Message::CameraCommand(CameraAction::TranslateRight)),
-                VirtualKeyCode::A => Some(Message::CameraCommand(CameraAction::TranslateLeft)),
-                VirtualKeyCode::Q => Some(Message::CameraCommand(CameraAction::TwistLeft)),
-                VirtualKeyCode::E => Some(Message::CameraCommand(CameraAction::TwistRight)),
-                VirtualKeyCode::Left => Some(Message::CameraCommand(CameraAction::RotateLeft)),
-                VirtualKeyCode::Right => Some(Message::CameraCommand(CameraAction::RotateRight)),
-                VirtualKeyCode::Up => Some(Message::CameraCommand(CameraAction::RotateUp)),
-                VirtualKeyCode::Down => Some(Message::CameraCommand(CameraAction::RotateDown)),
-                _ => None,
-            };
+        let response = match vkcode {
+            VirtualKeyCode::W     if pressed  => camera(CameraAction::TranslateForwardBegin),
+            VirtualKeyCode::W     if released => camera(CameraAction::TranslateForwardEnd),
+            VirtualKeyCode::S     if pressed  => camera(CameraAction::TranslateBackwardBegin),
+            VirtualKeyCode::S     if released => camera(CameraAction::TranslateBackwardEnd),
+            VirtualKeyCode::D     if pressed  => camera(CameraAction::TranslateRightBegin),
+            VirtualKeyCode::D     if released => camera(CameraAction::TranslateRightEnd),
+            VirtualKeyCode::A     if pressed  => camera(CameraAction::TranslateLeftBegin),
+            VirtualKeyCode::A     if released => camera(CameraAction::TranslateLeftEnd),
+            VirtualKeyCode::Q     if pressed  => camera(CameraAction::TwistLeftBegin),
+            VirtualKeyCode::Q     if released => camera(CameraAction::TwistLeftEnd),
+            VirtualKeyCode::E     if pressed  => camera(CameraAction::TwistRightBegin),
+            VirtualKeyCode::E     if released => camera(CameraAction::TwistRightEnd),
+            VirtualKeyCode::Left  if pressed  => camera(CameraAction::RotateLeftBegin),
+            VirtualKeyCode::Left  if released => camera(CameraAction::RotateLeftEnd),
+            VirtualKeyCode::Right if pressed  => camera(CameraAction::RotateRightBegin),
+            VirtualKeyCode::Right if released => camera(CameraAction::RotateRightEnd),
+            VirtualKeyCode::Up    if pressed  => camera(CameraAction::RotateUpBegin),
+            VirtualKeyCode::Up    if released => camera(CameraAction::RotateUpEnd),
+            VirtualKeyCode::Down  if pressed  => camera(CameraAction::RotateDownBegin),
+            VirtualKeyCode::Down  if released => camera(CameraAction::RotateDownEnd),
+            _ => None,
+        };
 
-            if let Some(message) = response {
-                messages.push(message);
-            }
-        }
-
-        messages
+        response.map(|x| vec![x])
+                .unwrap_or_else(|| Vec::new())
     }
 }
 
 impl MessageReceiver for InputManager {
     fn process_messages(&mut self, messages: &[Message]) -> Vec<Message> {
-        use glium::glutin::Event;
         let mut response = Vec::new();
         for message in messages {
             match message {

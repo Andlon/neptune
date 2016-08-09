@@ -2,6 +2,7 @@
 extern crate glium;
 #[macro_use]
 extern crate cgmath;
+extern crate time;
 
 mod entity;
 mod engine;

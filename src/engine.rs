@@ -35,9 +35,11 @@ impl Engine {
         initialize_scene(&window, &mut entity_manager, &mut stores);
 
         while self.should_continue {
+            let camera = systems.camera.update();
+
             // Render
             let mut frame = window.begin_frame();
-            systems.scene.render(&mut frame, systems.camera.camera(), &stores.scene, &stores.transform);
+            systems.scene.render(&mut frame, camera, &stores.scene, &stores.transform);
             frame.finish();
 
             let messages = window.check_events();
