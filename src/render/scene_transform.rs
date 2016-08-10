@@ -29,7 +29,11 @@ impl SceneTransformStore {
         self.store.lookup(entity)
     }
 
-    pub fn renderables(&self) -> &HashMap<Entity, SceneTransform> {
+    pub fn transforms(&self) -> &HashMap<Entity, SceneTransform> {
         &self.store.components
+    }
+
+    pub fn transforms_mut(&mut self) -> &mut HashMap<Entity, SceneTransform> {
+        &mut self.store.components
     }
 }

@@ -7,11 +7,13 @@ extern crate time;
 mod entity;
 mod engine;
 mod render;
+mod physics;
 mod store;
 mod input_manager;
 mod geometry;
 mod message;
 mod camera_controller;
+mod time_keeper;
 
 use engine::Engine;
 

@@ -1,8 +1,11 @@
 use entity::{Entity, EntityManager};
 use render::*;
+use physics::*;
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera_controller::CameraController;
+use time_keeper::TimeKeeper;
+use time::*;
 
 pub struct Engine {
     should_continue: bool
@@ -10,13 +13,15 @@ pub struct Engine {
 
 pub struct ComponentStores {
     pub scene: SceneRenderableStore,
-    pub transform: SceneTransformStore
+    pub transform: SceneTransformStore,
+    pub physics: PhysicsComponentStore
 }
 
 pub struct Systems {
     pub scene: SceneRenderer,
     pub input: InputManager,
     pub camera: CameraController,
+    pub physics: PhysicsEngine
 }
 
 impl Engine {
@@ -28,13 +33,29 @@ impl Engine {
     pub fn run(&mut self) {
         let window = Window::new();
 
+        const TIMESTEP: f64 = 0.01;
+
         let mut entity_manager = EntityManager::new();
         let mut stores = prepare_component_stores();
         let mut systems = prepare_systems(&window);
+        let mut time_keeper = TimeKeeper::new();
 
         initialize_scene(&window, &mut entity_manager, &mut stores);
+        sync_transform_with_physics(&mut stores.transform, &stores.physics);
+
+        let mut frame_timestamp = precise_time_s();
 
         while self.should_continue {
+            let new_frame_timestamp = precise_time_s();
+            let frame_time = new_frame_timestamp - frame_timestamp;
+            frame_timestamp = new_frame_timestamp;
+            time_keeper.produce(frame_time);
+
+            while time_keeper.consume(TIMESTEP) {
+                systems.physics.simulate(TIMESTEP, &mut stores.physics);
+                sync_transform_with_physics(&mut stores.transform, &stores.physics);
+            }
+
             let camera = systems.camera.update();
 
             // Render
@@ -72,7 +93,8 @@ impl Engine {
 fn prepare_component_stores() -> ComponentStores {
     ComponentStores {
         scene: SceneRenderableStore::new(),
-        transform: SceneTransformStore::new()
+        transform: SceneTransformStore::new(),
+        physics: PhysicsComponentStore::new()
     }
 }
 
@@ -82,12 +104,23 @@ fn prepare_systems(window: &Window) -> Systems {
     Systems {
         scene: SceneRenderer::new(window),
         input: InputManager::new(),
-        camera: CameraController::from(default_camera)
+        camera: CameraController::from(default_camera),
+        physics: PhysicsEngine::new()
+    }
+}
+
+fn sync_transform_with_physics(transforms: &mut SceneTransformStore, physics: &PhysicsComponentStore) {
+    use cgmath::{Point3, EuclideanSpace};
+    for (entity, ref mut transform) in transforms.transforms_mut() {
+        if let Some(position) = physics.lookup_position(&entity) {
+            // TODO: Implement .cast() for Point3 in cgmath?
+            transform.position = Point3::from_vec(position.to_vec().cast::<f32>());
+        }
     }
 }
 
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores) {
-    use cgmath::Point3;
+    use cgmath::{Point3, Vector3};
 
     // Create a tetrahedron
     let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
@@ -117,4 +150,8 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     };
     stores.scene.set_renderable(sphere_entity, sphere_renderable);
     stores.transform.set_transform(sphere_entity, sphere_transform);
+    stores.physics.set_component_properties(sphere_entity,
+        Point3::new(0.0, 15.0, 5.0),
+        Vector3::new(0.0, 0.0, 0.5),
+        1.0);
 }
