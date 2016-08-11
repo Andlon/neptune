@@ -67,6 +67,11 @@ impl PhysicsComponentStore {
                        .map(|index| self.position[index.clone()])
     }
 
+    pub fn lookup_prev_position(&self, entity: &Entity) -> Option<Point3<f64>> {
+        self.entity_map.get(entity)
+                       .map(|index| self.prev_position[index.clone()])
+    }
+
     pub fn num_components(&self) -> usize {
         assert!(self.position.len() == self.velocity.len() && self.velocity.len() == self.mass.len());
         self.position.len()

@@ -33,7 +33,7 @@ impl Engine {
     pub fn run(&mut self) {
         let window = Window::new();
 
-        const TIMESTEP: f64 = 0.01;
+        const TIMESTEP: f64 = 0.05;
 
         let mut entity_manager = EntityManager::new();
         let mut stores = prepare_component_stores();
@@ -41,7 +41,6 @@ impl Engine {
         let mut time_keeper = TimeKeeper::new();
 
         initialize_scene(&window, &mut entity_manager, &mut stores);
-        sync_transform_with_physics(&mut stores.transform, &stores.physics);
 
         let mut frame_timestamp = precise_time_s();
 
@@ -53,8 +52,10 @@ impl Engine {
 
             while time_keeper.consume(TIMESTEP) {
                 systems.physics.simulate(TIMESTEP, &mut stores.physics);
-                sync_transform_with_physics(&mut stores.transform, &stores.physics);
             }
+
+            let alpha = time_keeper.accumulated() / TIMESTEP;
+            interpolate_transforms(&mut stores.transform, &stores.physics, alpha);
 
             let camera = systems.camera.update();
 
@@ -109,12 +110,24 @@ fn prepare_systems(window: &Window) -> Systems {
     }
 }
 
-fn sync_transform_with_physics(transforms: &mut SceneTransformStore, physics: &PhysicsComponentStore) {
+fn interpolate_transforms(transforms: &mut SceneTransformStore,
+                          physics: &PhysicsComponentStore,
+                          fraction: f64) {
     use cgmath::{Point3, EuclideanSpace};
+    assert!(fraction >= 0.0 && fraction <= 1.0);
+
     for (entity, ref mut transform) in transforms.transforms_mut() {
-        if let Some(position) = physics.lookup_position(&entity) {
+        let current_pos = physics.lookup_position(&entity);
+        let prev_pos = physics.lookup_prev_position(&entity);
+
+        let interpolated_pos_vec = prev_pos.iter().zip(current_pos)
+                                           .map(|(prev, curr)| (prev.to_vec(), curr.to_vec()))
+                                           .map(|(prev, curr)| fraction * curr + (1.0 - fraction) * prev)
+                                           .next();
+
+        if let Some(position) = interpolated_pos_vec {
             // TODO: Implement .cast() for Point3 in cgmath?
-            transform.position = Point3::from_vec(position.to_vec().cast::<f32>());
+            transform.position = Point3::from_vec(position.cast::<f32>());
         }
     }
 }
@@ -156,6 +169,6 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     stores.transform.set_transform(sphere_entity, sphere_transform);
     stores.physics.set_component_properties(sphere_entity,
         Point3::new(0.0, 15.0, 5.0),
-        Vector3::new(0.0, 1.0, 0.5),
+        Vector3::new(0.0, 2.5, 0.0),
         1.0);
 }
