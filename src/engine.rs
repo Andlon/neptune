@@ -141,6 +141,10 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     };
     stores.scene.set_renderable(ico_entity, ico_renderable);
     stores.transform.set_transform(ico_entity, ico_transform);
+    stores.physics.set_component_properties(ico_entity,
+        Point3::new(0.0, 15.0, 0.0),
+        Vector3::new(0.0, 0.0, 0.0),
+        1.0e11);
 
     // And a unit sphere
     let sphere_entity = entity_manager.create();
@@ -152,6 +156,6 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     stores.transform.set_transform(sphere_entity, sphere_transform);
     stores.physics.set_component_properties(sphere_entity,
         Point3::new(0.0, 15.0, 5.0),
-        Vector3::new(0.0, 0.0, 0.5),
+        Vector3::new(0.0, 1.0, 0.5),
         1.0);
 }
