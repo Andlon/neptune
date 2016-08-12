@@ -1,10 +1,11 @@
 use cgmath::{Point3, Vector3, Zero};
 use store::{Identifier, OneToOneStore};
 use std::collections::HashMap;
+use std::collections::hash_map::Iter;
 use entity::Entity;
 use itertools::Zip;
 
-type PhysicsComponentId = usize;
+pub type PhysicsComponentId = usize;
 
 pub struct PhysicsComponentStore {
     position: Vec<Point3<f64>>,
@@ -62,14 +63,21 @@ impl PhysicsComponentStore {
         index
     }
 
-    pub fn lookup_position(&self, entity: &Entity) -> Option<Point3<f64>> {
-        self.entity_map.get(entity)
-                       .map(|index| self.position[index.clone()])
+    // When 'impl Trait' lands in stable, we can return something like impl Iterator instead
+    pub fn entity_component_pairs<'a>(&'a self) -> Iter<'a, Entity, PhysicsComponentId> {
+        self.entity_map.iter()
     }
 
-    pub fn lookup_prev_position(&self, entity: &Entity) -> Option<Point3<f64>> {
-        self.entity_map.get(entity)
-                       .map(|index| self.prev_position[index.clone()])
+    pub fn lookup_component(&self, entity: &Entity) -> Option<PhysicsComponentId> {
+        self.entity_map.get(entity).map(|x| x.to_owned())
+    }
+
+    pub fn lookup_position(&self, component: &PhysicsComponentId) -> Point3<f64> {
+        self.position[component.to_owned()]
+    }
+
+    pub fn lookup_prev_position(&self, component: &PhysicsComponentId) -> Point3<f64> {
+        self.prev_position[component.to_owned()]
     }
 
     pub fn num_components(&self) -> usize {

@@ -110,19 +110,23 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
     use cgmath::{Point3, EuclideanSpace};
     assert!(fraction >= 0.0 && fraction <= 1.0);
 
-    for (entity, ref mut transform) in transforms.transforms_mut() {
-        let current_pos = physics.lookup_position(&entity);
-        let prev_pos = physics.lookup_prev_position(&entity);
+    for (&entity, &component) in physics.entity_component_pairs() {
+        let prev_pos = physics.lookup_prev_position(&component).to_vec();
+        let current_pos = physics.lookup_position(&component).to_vec();
 
-        let interpolated_pos_vec = prev_pos.iter().zip(current_pos)
-                                           .map(|(prev, curr)| (prev.to_vec(), curr.to_vec()))
-                                           .map(|(prev, curr)| fraction * curr + (1.0 - fraction) * prev)
-                                           .next();
+        let interpolated_pos = {
+            // We have to work around the fact that cgmath does not implement .cast()
+            // for Point3<S>, but only for Vector3<S>.
+            let vector_form = fraction * current_pos + (1.0 - fraction) * prev_pos;
+            Point3::from_vec(vector_form.cast::<f32>())
+        };
 
-        if let Some(position) = interpolated_pos_vec {
-            // TODO: Implement .cast() for Point3 in cgmath?
-            transform.position = Point3::from_vec(position.cast::<f32>());
-        }
+        let transform = SceneTransform { position: interpolated_pos };
+
+        // Note: This implicitly adds a SceneTransform component to any
+        // component which has a Physics component, which we deem
+        // to be desirable behavior.
+        transforms.set_transform(entity, transform);
     }
 }
 
@@ -143,11 +147,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     // Also create an icosahedron
     let ico_entity = entity_manager.create();
     let ico_renderable = icosahedron_renderable(&window);
-    let ico_transform = SceneTransform {
-        position: Point3 { x: 0.0, y: 15.0, z: 0.0 }
-    };
     stores.scene.set_renderable(ico_entity, ico_renderable);
-    stores.transform.set_transform(ico_entity, ico_transform);
     stores.physics.set_component_properties(ico_entity,
         Point3::new(0.0, 15.0, 0.0),
         Vector3::new(0.0, 0.0, 0.0),
@@ -156,11 +156,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     // And a unit sphere
     let sphere_entity = entity_manager.create();
     let sphere_renderable = unit_sphere_renderable(&window, 4);
-    let sphere_transform = SceneTransform {
-        position: Point3 { x: 0.0, y: 15.0, z: 5.0 }
-    };
     stores.scene.set_renderable(sphere_entity, sphere_renderable);
-    stores.transform.set_transform(sphere_entity, sphere_transform);
     stores.physics.set_component_properties(sphere_entity,
         Point3::new(0.0, 15.0, 5.0),
         Vector3::new(0.0, 2.5, 0.0),
