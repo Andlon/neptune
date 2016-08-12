@@ -1,8 +1,10 @@
+use time;
 
 pub struct TimeKeeper {
     accumulated: f64,
     produced: f64,
-    consumed: f64
+    consumed: f64,
+    timestamp: f64
 }
 
 impl TimeKeeper {
@@ -10,12 +12,21 @@ impl TimeKeeper {
         TimeKeeper {
             accumulated: 0.0,
             produced: 0.0,
-            consumed: 0.0
+            consumed: 0.0,
+            timestamp: time::precise_time_s()
         }
     }
     pub fn produce(&mut self, time: f64) {
         self.accumulated += time;
         self.produced += time;
+    }
+
+    pub fn produce_frame(&mut self) -> f64 {
+        let new_timestamp = time::precise_time_s();
+        let elapsed = new_timestamp - self.timestamp;
+        self.produce(elapsed);
+        self.timestamp = new_timestamp;
+        elapsed
     }
 
     pub fn consume(&mut self, time: f64) -> bool {

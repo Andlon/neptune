@@ -1,6 +1,5 @@
 use render::Camera;
 use message::{Message, MessageReceiver};
-use time;
 use cgmath::{Vector3, Zero, InnerSpace};
 
 #[derive(Copy, Clone, Debug)]
@@ -29,7 +28,6 @@ pub enum CameraAction {
 
 pub struct CameraController {
     camera: Camera,
-    timestamp: f64,
 
     // Current controller state
     translate_forward: bool,
@@ -48,7 +46,6 @@ impl From<Camera> for CameraController {
     fn from(camera: Camera) -> Self {
         CameraController {
             camera: camera,
-            timestamp: time::precise_time_s(),
             translate_forward: false,
             translate_backward: false,
             translate_left: false,
@@ -68,16 +65,13 @@ impl CameraController {
         self.camera
     }
 
-    pub fn update(&mut self) -> Camera {
+    pub fn update(&mut self, frame_time: f64) -> Camera {
+        assert!(frame_time >= 0.0);
         const TRANSLATION_SPEED: f64 = 4.0;
         const ROTATION_SPEED: f64 = 1.5;
 
-        let new_timestamp = time::precise_time_s();
-        let elapsed = new_timestamp - self.timestamp;
-        self.timestamp = new_timestamp;
-
-        let trans_amount = (TRANSLATION_SPEED * elapsed) as f32;
-        let rot_angle = (ROTATION_SPEED * elapsed) as f32;
+        let trans_amount = (TRANSLATION_SPEED * frame_time) as f32;
+        let rot_angle = (ROTATION_SPEED * frame_time) as f32;
 
         let translation = trans_amount * self.determine_direction();
         let rotated_camera = self.rotate_camera(rot_angle);

@@ -5,7 +5,6 @@ use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera_controller::CameraController;
 use time_keeper::TimeKeeper;
-use time::*;
 
 pub struct Engine {
     should_continue: bool
@@ -42,22 +41,17 @@ impl Engine {
 
         initialize_scene(&window, &mut entity_manager, &mut stores);
 
-        let mut frame_timestamp = precise_time_s();
-
         while self.should_continue {
-            let new_frame_timestamp = precise_time_s();
-            let frame_time = new_frame_timestamp - frame_timestamp;
-            frame_timestamp = new_frame_timestamp;
-            time_keeper.produce(frame_time);
+            let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
                 systems.physics.simulate(TIMESTEP, &mut stores.physics);
             }
 
-            let alpha = time_keeper.accumulated() / TIMESTEP;
-            interpolate_transforms(&mut stores.transform, &stores.physics, alpha);
+            let progress = time_keeper.accumulated() / TIMESTEP;
+            interpolate_transforms(&mut stores.transform, &stores.physics, progress);
 
-            let camera = systems.camera.update();
+            let camera = systems.camera.update(frame_time);
 
             // Render
             let mut frame = window.begin_frame();
