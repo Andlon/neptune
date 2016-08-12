@@ -3,7 +3,7 @@ use render::*;
 use physics::*;
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
-use camera_controller::CameraController;
+use camera::{Camera, CameraController};
 use time_keeper::TimeKeeper;
 
 pub struct Engine {

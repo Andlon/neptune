@@ -1,4 +1,4 @@
-use render::Camera;
+use camera::Camera;
 use message::{Message, MessageReceiver};
 use cgmath::{Vector3, Zero, InnerSpace};
 

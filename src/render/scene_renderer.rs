@@ -1,7 +1,8 @@
 use glium::{Surface, VertexBuffer, IndexBuffer};
 use glium;
-use render::*;
 use cgmath::*;
+use camera::Camera;
+use render::*;
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     // TODO: Move this into Camera, so that we can

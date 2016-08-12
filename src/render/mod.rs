@@ -21,8 +21,5 @@ pub use self::primitives::{
     unit_sphere_renderable,
 };
 
-mod camera;
-pub use self::camera::Camera;
-
 mod window;
 pub use self::window::{Window, Frame};

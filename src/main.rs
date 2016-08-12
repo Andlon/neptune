@@ -14,7 +14,7 @@ mod store;
 mod input_manager;
 mod geometry;
 mod message;
-mod camera_controller;
+mod camera;
 mod time_keeper;
 
 use engine::Engine;

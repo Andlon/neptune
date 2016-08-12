@@ -1,5 +1,5 @@
 use glium::glutin::{ElementState, VirtualKeyCode};
-use camera_controller::CameraAction;
+use camera::CameraAction;
 
 #[derive(Clone, Debug)]
 pub enum Message {

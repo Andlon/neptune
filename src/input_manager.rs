@@ -1,6 +1,6 @@
 use glium::glutin::{ElementState, VirtualKeyCode};
 use message::{Message, MessageReceiver};
-use camera_controller::CameraAction;
+use camera::CameraAction;
 
 pub struct InputManager;
 
