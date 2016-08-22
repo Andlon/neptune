@@ -35,7 +35,7 @@ impl Engine {
     pub fn run(&mut self) {
         let window = Window::new();
 
-        const TIMESTEP: f64 = 0.05;
+        const TIMESTEP: f64 = 0.02;
 
         let mut entity_manager = EntityManager::new();
         let mut stores = prepare_component_stores();
