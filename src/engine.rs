@@ -15,7 +15,7 @@ pub struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: SceneTransformStore,
     pub physics: PhysicsComponentStore,
-    pub collision: CollisionComponentStore
+    pub collision: CollisionComponentStore,
 }
 
 pub struct Systems {
@@ -40,6 +40,7 @@ impl Engine {
         let mut entity_manager = EntityManager::new();
         let mut stores = prepare_component_stores();
         let mut systems = prepare_systems(&window);
+        let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
         initialize_scene(&window, &mut entity_manager, &mut stores);
@@ -49,9 +50,7 @@ impl Engine {
 
             while time_keeper.consume(TIMESTEP) {
                 systems.physics.simulate(TIMESTEP, &mut stores.physics);
-
-                let messages = systems.collision.detect_collisions(&stores.physics, &stores.collision);
-                self.dispatch_messages(messages, &mut systems);
+                systems.collision.detect_collisions(&stores.physics, &stores.collision, &mut contacts);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
@@ -80,7 +79,6 @@ impl Engine {
             for message in messages {
                 match message {
                     Message::WindowClosed => self.should_continue = false,
-                    Message::CollisionDetected(_, _) => println!("Collision detected!"),
                     _ => ()
                 };
             }

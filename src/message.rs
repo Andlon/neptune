@@ -6,8 +6,7 @@ use entity::Entity;
 pub enum Message {
     WindowClosed,
     KeyboardInputReceived(ElementState, VirtualKeyCode),
-    CameraCommand(CameraAction),
-    CollisionDetected(Entity, Entity)
+    CameraCommand(CameraAction)
 }
 
 pub trait MessageReceiver {

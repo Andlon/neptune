@@ -3,16 +3,17 @@ use geometry::*;
 use entity::Entity;
 use std::collections::HashMap;
 
+pub type CollisionComponentId = usize;
+
 pub enum CollisionModel {
     SphereModel { radius: f64 }
 }
 
-pub type CollisionComponentId = usize;
 pub struct CollisionComponentStore {
     models: Vec<CollisionModel>,
     entities: Vec<Entity>,
 
-    entity_map: HashMap<Entity, CollisionComponentId>
+    entity_map: HashMap<Entity, CollisionComponentId>,
 }
 
 impl CollisionComponentStore {
@@ -20,7 +21,7 @@ impl CollisionComponentStore {
         CollisionComponentStore {
             models: Vec::new(),
             entities: Vec::new(),
-            entity_map: HashMap::new()
+            entity_map: HashMap::new(),
         }
     }
 

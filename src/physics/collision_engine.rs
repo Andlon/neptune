@@ -1,10 +1,8 @@
-use physics::{CollisionComponentStore, CollisionModel, PhysicsComponentStore};
+use physics::{Contact, ContactCollection, CollisionComponentStore, CollisionModel, PhysicsComponentStore};
 use geometry::{OverlapsWith, Sphere};
 use message::Message;
 
-pub struct CollisionEngine {
-
-}
+pub struct CollisionEngine;
 
 impl CollisionEngine {
     pub fn new() -> CollisionEngine {
@@ -13,11 +11,10 @@ impl CollisionEngine {
 
     pub fn detect_collisions(&self,
         physics_store: &PhysicsComponentStore,
-        collision_store: &CollisionComponentStore)
-        -> Vec<Message>
+        collision_store: &CollisionComponentStore,
+        contacts: &mut ContactCollection)
     {
-        let mut messages = Vec::new();
-
+        contacts.clear_contacts();
         for i in 0 .. collision_store.num_components() {
             for j in (i + 1) .. collision_store.num_components() {
                 let entity_i = &collision_store.entities()[i];
@@ -35,8 +32,6 @@ impl CollisionEngine {
                 let pos_i = physics_store.lookup_position(&phys_id_i);
                 let pos_j = physics_store.lookup_position(&phys_id_j);
 
-                type Sphere = CollisionModel::SphereModel;
-
                 let collides = match (model_i, model_j) {
                     (&CollisionModel::SphereModel { radius: r_i },
                      &CollisionModel::SphereModel { radius: r_j })
@@ -50,11 +45,10 @@ impl CollisionEngine {
                 if collides {
                     let entity1 = collision_store.entities()[i];
                     let entity2 = collision_store.entities()[j];
-                    messages.push(Message::CollisionDetected(entity1, entity2));
+                    let contact = Contact { objects: (entity1, entity2) };
+                    contacts.push_contact(contact);
                 }
             }
         }
-
-        messages
     }
 }
