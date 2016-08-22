@@ -40,7 +40,7 @@ pub struct SceneRenderer {
 impl SceneRenderer {
     pub fn new(window: &Window) -> SceneRenderer {
         let vertex_shader_src = r#"
-            #version 140
+            #version 330
             in vec3 pos;
             in vec3 normal;
 
@@ -53,14 +53,14 @@ impl SceneRenderer {
 
             void main() {
                 mat4 modelview = view * model;
-                vertex_normal = transpose(inverse(mat3(modelview))) * normal;
                 gl_Position = perspective * modelview * vec4(pos, 1.0);
-                vertex_position = gl_Position.xyz / gl_Position.w;
+                vertex_normal = transpose(inverse(mat3(modelview))) * normal;
+                vertex_position = vec3(modelview * vec4(pos, 1.0));
             }
         "#;
 
         let fragment_shader_src = r#"
-            #version 140
+            #version 330
 
             in vec3 vertex_normal;
             in vec3 vertex_position;
@@ -68,19 +68,43 @@ impl SceneRenderer {
             out vec4 color;
 
             uniform vec3 light_direction;
+            uniform vec3 diffuse_color;
 
-            const vec3 ambient_color = vec3(0.05, 0.0, 0.0);
-            const vec3 diffuse_color = vec3(0.6, 0.0, 0.0);
-            const vec3 specular_color = vec3(1.0, 1.0, 1.0);
+            const vec3 u_ambient_intensity = vec3(0.05, 0.05, 0.05);
+            const vec3 u_diffuse_intensity = vec3(0.6, 0.6, 0.6);
+            const vec3 u_specular_intensity = vec3(0.90, 0.90, 0.90);
+            const float shininess = 32.0;
+
+            vec3 specular_lighting(vec3 v_normal, vec3 light_dir, vec3 camera_dir) {
+                vec3 half_direction = normalize(light_dir + camera_dir);
+
+                float specular_weight = 0;
+                if (dot(v_normal, light_dir) > 0) {
+                    specular_weight = pow(max(dot(half_direction, v_normal), 0.0), shininess);
+                }
+
+                return specular_weight * u_specular_intensity;
+            }
+
+            vec3 diffuse_lighting(vec3 v_normal, vec3 light_dir) {
+                float diffuse_weight = max(dot(v_normal, light_dir), 0.0);
+                return diffuse_weight * u_diffuse_intensity * diffuse_color;
+            }
+
+            vec3 ambient_lighting() {
+                return u_ambient_intensity * u_diffuse_intensity * diffuse_color;
+            }
 
             void main() {
-                float diffuse = max(dot(normalize(vertex_normal), normalize(light_direction)), 0.0);
-
+                vec3 v_normal = normalize(vertex_normal);
+                vec3 l_dir = normalize(light_direction);
                 vec3 camera_dir = normalize(-vertex_position);
-                vec3 half_direction = normalize(light_direction + camera_dir);
-                float specular = pow(max(dot(half_direction, normalize(vertex_normal)), 0.0), 16.0);
 
-                color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+                vec3 ambient = ambient_lighting();
+                vec3 diffuse = diffuse_lighting(v_normal, l_dir);
+                vec3 specular = specular_lighting(v_normal, l_dir, camera_dir);
+
+                color = vec4(ambient + diffuse + specular, 1.0);
             }
         "#;
 
@@ -123,6 +147,8 @@ impl SceneRenderer {
             dir4.truncate().into()
         };
 
+        let color = [1.0f32, 0.0, 0.0];
+
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
                 let model = model_matrix(&transform.position);
@@ -130,7 +156,8 @@ impl SceneRenderer {
                     model: model,
                     view: view,
                     perspective: perspective,
-                    light_direction: light_direction
+                    light_direction: light_direction,
+                    diffuse_color: color
                 };
 
                 surface.draw(
