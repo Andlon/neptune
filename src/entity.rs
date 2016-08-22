@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
 pub struct Entity {
     id: u32,
 }

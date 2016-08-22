@@ -1,6 +1,7 @@
 use entity::{Entity, EntityManager};
 use render::*;
 use physics::*;
+use geometry::Sphere;
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -13,14 +14,16 @@ pub struct Engine {
 pub struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: SceneTransformStore,
-    pub physics: PhysicsComponentStore
+    pub physics: PhysicsComponentStore,
+    pub collision: CollisionComponentStore
 }
 
 pub struct Systems {
     pub scene: SceneRenderer,
     pub input: InputManager,
     pub camera: CameraController,
-    pub physics: PhysicsEngine
+    pub physics: PhysicsEngine,
+    pub collision: CollisionEngine
 }
 
 impl Engine {
@@ -46,6 +49,9 @@ impl Engine {
 
             while time_keeper.consume(TIMESTEP) {
                 systems.physics.simulate(TIMESTEP, &mut stores.physics);
+
+                let messages = systems.collision.detect_collisions(&stores.physics, &stores.collision);
+                self.dispatch_messages(messages, &mut systems);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
@@ -74,6 +80,7 @@ impl Engine {
             for message in messages {
                 match message {
                     Message::WindowClosed => self.should_continue = false,
+                    Message::CollisionDetected(_, _) => println!("Collision detected!"),
                     _ => ()
                 };
             }
@@ -89,7 +96,8 @@ fn prepare_component_stores() -> ComponentStores {
     ComponentStores {
         scene: SceneRenderableStore::new(),
         transform: SceneTransformStore::new(),
-        physics: PhysicsComponentStore::new()
+        physics: PhysicsComponentStore::new(),
+        collision: CollisionComponentStore::new()
     }
 }
 
@@ -100,7 +108,8 @@ fn prepare_systems(window: &Window) -> Systems {
         scene: SceneRenderer::new(window),
         input: InputManager::new(),
         camera: CameraController::from(default_camera),
-        physics: PhysicsEngine::new()
+        physics: PhysicsEngine::new(),
+        collision: CollisionEngine::new()
     }
 }
 
@@ -131,34 +140,59 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 }
 
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores) {
-    use cgmath::{Point3, Vector3};
+    use cgmath::{Point3, Vector3, EuclideanSpace};
 
-    // Create a tetrahedron
-    let (a, b, c, d) = (Point3::new(-0.5, 0.0, 0.0), Point3::new(0.5, 0.0, 0.0),
-                        Point3::new(0.0, 0.5, 0.0), Point3::new(0.0, 0.25, 0.5));
-    let triangle_entity = entity_manager.create();
-    let triangle_renderable = tetrahedron_renderable(&window, a, b, c, d);
-    let triangle_transform = SceneTransform {
-        position: Point3 { x: 0.0, y: 5.0, z: 0.0 }
-    };
-    stores.scene.set_renderable(triangle_entity, triangle_renderable);
-    stores.transform.set_transform(triangle_entity, triangle_transform);
+    {
+        // Create an icosahedron
+        let ico_entity = entity_manager.create();
+        let ico_renderable = icosahedron_renderable(&window);
+        stores.scene.set_renderable(ico_entity, ico_renderable);
+        stores.physics.set_component_properties(ico_entity,
+            Point3::new(0.0, 15.0, 0.0),
+            Vector3::new(0.0, 0.0, 0.0),
+            1.0e11);
+    }
 
-    // Also create an icosahedron
-    let ico_entity = entity_manager.create();
-    let ico_renderable = icosahedron_renderable(&window);
-    stores.scene.set_renderable(ico_entity, ico_renderable);
-    stores.physics.set_component_properties(ico_entity,
-        Point3::new(0.0, 15.0, 0.0),
-        Vector3::new(0.0, 0.0, 0.0),
-        1.0e11);
+    {
+        // And a unit sphere
+        let sphere_entity = entity_manager.create();
+        let sphere_position = Point3::new(0.0, 15.0, 5.0);
+        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        stores.scene.set_renderable(sphere_entity, sphere_renderable);
+        stores.physics.set_component_properties(sphere_entity,
+            sphere_position,
+            Vector3::new(0.0, 2.5, 0.0),
+            1.0);
+        stores.collision.set_component_model(sphere_entity, sphere_collision_model);
+    }
 
-    // And a unit sphere
-    let sphere_entity = entity_manager.create();
-    let sphere_renderable = unit_sphere_renderable(&window, 4);
-    stores.scene.set_renderable(sphere_entity, sphere_renderable);
-    stores.physics.set_component_properties(sphere_entity,
-        Point3::new(0.0, 15.0, 5.0),
-        Vector3::new(0.0, 2.5, 0.0),
-        1.0);
+    {
+        // And one more that collides with the icosahedron
+        let sphere_entity = entity_manager.create();
+        let sphere_position = Point3::new(5.0, 15.0, 0.0);
+        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        stores.scene.set_renderable(sphere_entity, sphere_renderable);
+        stores.physics.set_component_properties(sphere_entity,
+            sphere_position,
+            Vector3::new(0.0, 0.0, 1.5),
+            1.0);
+        stores.collision.set_component_model(sphere_entity, sphere_collision_model);
+    }
+
+    {
+        // And one more that collides with the the other spheres
+        let sphere_entity = entity_manager.create();
+        let sphere_position = Point3::new(0.0, 15.0, -5.0);
+        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        stores.scene.set_renderable(sphere_entity, sphere_renderable);
+        stores.physics.set_component_properties(sphere_entity,
+            sphere_position,
+            Vector3::new(0.0, 1.0, 2.0),
+            1.0);
+        stores.collision.set_component_model(sphere_entity, sphere_collision_model);
+    }
+
 }

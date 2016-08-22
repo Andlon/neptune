@@ -24,7 +24,7 @@ impl<S> Interval<S> where S: BaseNum {
     }
 }
 
-trait OverlapsWith<Shape> {
+pub trait OverlapsWith<Shape> {
     fn overlaps_with(&self, shape: &Shape) -> bool;
 }
 
