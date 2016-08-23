@@ -7,6 +7,26 @@ use itertools::Zip;
 
 pub type PhysicsComponentId = usize;
 
+pub struct PhysicsComponentsView<'a> {
+    pub position: &'a [Point3<f64>],
+    pub velocity: &'a [Vector3<f64>],
+    pub acceleration: &'a [Vector3<f64>],
+    pub mass: &'a [f64],
+
+    pub prev_position: &'a [Point3<f64>],
+    pub prev_acceleration: &'a [Vector3<f64>]
+}
+
+pub struct MutablePhysicsComponentsView<'a> {
+    pub position: &'a mut [Point3<f64>],
+    pub velocity: &'a mut [Vector3<f64>],
+    pub acceleration: &'a mut [Vector3<f64>],
+    pub mass: &'a mut [f64],
+
+    pub prev_position: &'a mut [Point3<f64>],
+    pub prev_acceleration: &'a mut [Vector3<f64>]
+}
+
 pub struct PhysicsComponentStore {
     position: Vec<Point3<f64>>,
     velocity: Vec<Vector3<f64>>,
@@ -15,6 +35,7 @@ pub struct PhysicsComponentStore {
 
     // Used for interpolating the state between physics frames
     prev_position: Vec<Point3<f64>>,
+    prev_acceleration: Vec<Vector3<f64>>,
 
     entity_map: HashMap<Entity, PhysicsComponentId>,
 }
@@ -28,6 +49,7 @@ impl PhysicsComponentStore {
             acceleration: Vec::new(),
             mass: Vec::new(),
             prev_position: Vec::new(),
+            prev_acceleration: Vec::new(),
             entity_map: HashMap::new()
         }
     }
@@ -50,7 +72,8 @@ impl PhysicsComponentStore {
             self.velocity.push(velocity);
             self.acceleration.push(Vector3::zero());
             self.mass.push(mass);
-            self.prev_position.push(position)
+            self.prev_position.push(position);
+            self.prev_acceleration.push(Vector3::zero());
         } else {
             self.position[index] = position;
             self.velocity[index] = velocity;
@@ -59,6 +82,7 @@ impl PhysicsComponentStore {
             // Setting prev position as well will avoid strange effects
             // as the object position is interpolated between physics frames
             self.prev_position[index] = position;
+            self.prev_acceleration[index] = Vector3::zero();
         }
         index
     }
@@ -85,39 +109,31 @@ impl PhysicsComponentStore {
         self.position.len()
     }
 
-    pub fn prev_positions<'a>(&'a self) -> &'a [Point3<f64>] {
-        self.prev_position.as_slice()
+    pub fn swap_buffers(&mut self) {
+        use std::mem::swap;
+        swap(&mut self.position, &mut self.prev_position);
+        swap(&mut self.acceleration, &mut self.prev_acceleration);
     }
 
-    pub fn prev_positions_mut<'a>(&'a mut self) -> &'a mut [Point3<f64>] {
-        self.prev_position.as_mut_slice()
+    pub fn view<'a>(&'a self) -> PhysicsComponentsView<'a> {
+        PhysicsComponentsView {
+            position: &self.position,
+            velocity: &self.velocity,
+            acceleration: &self.acceleration,
+            mass: &self.mass,
+            prev_position: &self.prev_position,
+            prev_acceleration: &self.prev_acceleration
+        }
     }
 
-    pub fn positions<'a>(&'a self) -> &'a [Point3<f64>] {
-        self.position.as_slice()
-    }
-
-    pub fn positions_mut<'a>(&'a mut self) -> &'a mut [Point3<f64>] {
-        self.position.as_mut_slice()
-    }
-
-    pub fn velocities<'a>(&'a self) -> &'a [Vector3<f64>] {
-        self.velocity.as_slice()
-    }
-
-    pub fn velocities_mut<'a>(&'a mut self) -> &'a mut [Vector3<f64>] {
-        self.velocity.as_mut_slice()
-    }
-
-    pub fn accelerations<'a>(&'a self) -> &'a [Vector3<f64>] {
-        self.acceleration.as_slice()
-    }
-
-    pub fn accelerations_mut<'a>(&'a mut self) -> &'a mut [Vector3<f64>] {
-        self.acceleration.as_mut_slice()
-    }
-
-    pub fn masses<'a>(&'a self) -> &'a [f64] {
-        self.mass.as_slice()
+    pub fn mutable_view<'a>(&'a mut self) -> MutablePhysicsComponentsView<'a> {
+        MutablePhysicsComponentsView {
+            position: &mut self.position,
+            velocity: &mut self.velocity,
+            acceleration: &mut self.acceleration,
+            mass: &mut self.mass,
+            prev_position: &mut self.prev_position,
+            prev_acceleration: &mut self.prev_acceleration
+        }
     }
 }
