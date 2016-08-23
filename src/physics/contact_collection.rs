@@ -1,8 +1,12 @@
 use entity::Entity;
+use cgmath::{Vector3, Point3};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Contact {
-    pub objects: (Entity, Entity)
+    pub objects: (Entity, Entity),
+    pub point: Point3<f64>,
+    pub normal: Vector3<f64>,
+    pub penetration_depth: f64,
 }
 
 pub struct ContactCollection {
