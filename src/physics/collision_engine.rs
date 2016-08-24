@@ -50,6 +50,65 @@ impl CollisionEngine {
             }
         }
     }
+
+    pub fn resolve_collisions(&self,
+        physics_store: &mut PhysicsComponentStore,
+        contacts: &ContactCollection)
+    {
+        resolve_interpenetrations(physics_store, contacts);
+        resolve_velocities(physics_store, contacts);
+    }
+}
+
+fn resolve_velocities(
+    physics_store: &mut PhysicsComponentStore,
+    contacts: &ContactCollection)
+{
+    for contact in contacts.contacts() {
+        let (entity1, entity2) = contact.objects;
+        let potential_physics1 = physics_store.lookup_component(&entity1);
+        let potential_physics2 = physics_store.lookup_component(&entity2);
+
+        // For now, we only deal with collisions if both objects have a physics component,
+        // but this ignores collisions between static and dynamic geometry
+        // TODO: Deal with static-dynamic collisions
+        if let (Some(physics1), Some(physics2)) = (potential_physics1, potential_physics2) {
+            let v1 = physics_store.view().velocity[physics1];
+            let v2 = physics_store.view().velocity[physics2];
+            let m1 = physics_store.view().mass[physics1];
+            let m2 = physics_store.view().mass[physics2];
+            let v_closing = (v1 - v2).dot(contact.normal);
+
+            // We only need to apply an impulse if the objects
+            // are actually on a collision course
+            if v_closing > 0.0 {
+                let j_r = (2.0 * v_closing / (1.0 / m1 + 1.0 / m2)) * contact.normal;
+                let v1_post = v1 - j_r / m1;
+                let v2_post = v2 + j_r / m2;
+                let mut view = physics_store.mutable_view();
+                view.velocity[physics1] = v1_post;
+                view.velocity[physics2] = v2_post;
+            }
+        }
+    }
+}
+
+fn resolve_interpenetrations(
+    physics_store: &mut PhysicsComponentStore,
+    contacts: &ContactCollection)
+{
+    for contact in contacts.contacts() {
+        let (entity1, entity2) = contact.objects;
+        let potential_physics1 = physics_store.lookup_component(&entity1);
+        let potential_physics2 = physics_store.lookup_component(&entity2);
+
+        // For now, we only deal with collisions if both objects have a physics component,
+        // but this ignores collisions between static and dynamic geometry
+        // TODO: Deal with static-dynamic collisions
+        if let (Some(physics1), Some(physics2)) = (potential_physics1, potential_physics2) {
+            // TODO: Implement resolution of interpenetration
+        }
+    }
 }
 
 fn contact_for_spheres(

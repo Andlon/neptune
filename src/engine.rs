@@ -51,6 +51,7 @@ impl Engine {
             while time_keeper.consume(TIMESTEP) {
                 systems.physics.simulate(TIMESTEP, &mut stores.physics);
                 systems.collision.detect_collisions(&stores.physics, &stores.collision, &mut contacts);
+                systems.collision.resolve_collisions(&mut stores.physics, &contacts);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
