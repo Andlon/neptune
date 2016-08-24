@@ -61,7 +61,7 @@ impl Engine {
 
             // Render
             let mut frame = window.begin_frame();
-            systems.scene.render(&mut frame, camera, &stores.scene, &stores.transform, &contacts);
+            systems.scene.render(&mut frame, camera, &stores.scene, &stores.transform);
             frame.finish();
 
             let messages = window.check_events();

@@ -126,8 +126,7 @@ impl SceneRenderer {
         frame: &mut Frame,
         camera: Camera,
         renderable_store: &SceneRenderableStore,
-        transform_store: &SceneTransformStore,
-        contacts: &ContactCollection)
+        transform_store: &SceneTransformStore)
     {
         let surface = &mut frame.internal_frame;
         let params = glium::DrawParameters {
@@ -151,17 +150,9 @@ impl SceneRenderer {
             dir4.truncate().into()
         };
 
-        let in_contact = determine_entities_in_contact(contacts);
-
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
                 const NORMAL_COLOR: [f32; 3] = [1.0f32, 0.0, 0.0];
-                const CONTACT_COLOR: [f32; 3] = [0.0, 0.0, 1.0f32];
-
-                // As a temporary hack, change the color of the object
-                // depending on whether or not it is colliding with another object.
-                let color = if in_contact.contains(entity) { CONTACT_COLOR }
-                            else { NORMAL_COLOR };
 
                 let model = model_matrix(&transform.position);
                 let uniforms = uniform! {
@@ -169,7 +160,7 @@ impl SceneRenderer {
                     view: view,
                     perspective: perspective,
                     light_direction: light_direction,
-                    diffuse_color: color
+                    diffuse_color: NORMAL_COLOR
                 };
 
                 surface.draw(
