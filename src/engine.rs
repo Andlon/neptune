@@ -142,18 +142,20 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     use cgmath::{Point3, Vector3, EuclideanSpace};
 
     {
-        // Create an icosahedron
-        let ico_entity = entity_manager.create();
-        let ico_renderable = icosahedron_renderable(&window);
-        stores.scene.set_renderable(ico_entity, ico_renderable);
-        stores.physics.set_component_properties(ico_entity,
-            Point3::new(0.0, 15.0, 0.0),
+        let sphere_entity = entity_manager.create();
+        let sphere_position = Point3::new(0.0, 15.0, 0.0);
+        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        stores.scene.set_renderable(sphere_entity, sphere_renderable);
+        stores.physics.set_component_properties(sphere_entity,
+            sphere_position,
             Vector3::new(0.0, 0.0, 0.0),
             1.0e11);
+        stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
     {
-        // And a unit sphere
+        // And a light unit sphere
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(0.0, 15.0, 5.0);
         let sphere_renderable = unit_sphere_renderable(&window, 3);
@@ -167,7 +169,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     }
 
     {
-        // And one more that collides with the icosahedron
+        // And one more that collides with the heavy sphere
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(5.0, 15.0, 0.0);
         let sphere_renderable = unit_sphere_renderable(&window, 3);
