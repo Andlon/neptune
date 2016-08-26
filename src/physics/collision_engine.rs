@@ -73,10 +73,11 @@ fn resolve_velocities(
         // but this ignores collisions between static and dynamic geometry
         // TODO: Deal with static-dynamic collisions
         if let (Some(physics1), Some(physics2)) = (potential_physics1, potential_physics2) {
-            let v1 = physics_store.view().velocity[physics1];
-            let v2 = physics_store.view().velocity[physics2];
-            let m1 = physics_store.view().mass[physics1];
-            let m2 = physics_store.view().mass[physics2];
+            let mut view = physics_store.mutable_view();
+            let v1 = view.velocity[physics1];
+            let v2 = view.velocity[physics2];
+            let m1 = view.mass[physics1];
+            let m2 = view.mass[physics2];
             let v_closing = (v1 - v2).dot(contact.normal);
 
             // We only need to apply an impulse if the objects
@@ -85,7 +86,6 @@ fn resolve_velocities(
                 let j_r = (2.0 * v_closing / (1.0 / m1 + 1.0 / m2)) * contact.normal;
                 let v1_post = v1 - j_r / m1;
                 let v2_post = v2 + j_r / m2;
-                let mut view = physics_store.mutable_view();
                 view.velocity[physics1] = v1_post;
                 view.velocity[physics2] = v2_post;
             }
@@ -107,6 +107,22 @@ fn resolve_interpenetrations(
         // TODO: Deal with static-dynamic collisions
         if let (Some(physics1), Some(physics2)) = (potential_physics1, potential_physics2) {
             // TODO: Implement resolution of interpenetration
+            let mut view = physics_store.mutable_view();
+            let p1 = view.position[physics1];
+            let p2 = view.position[physics2];
+            let m1 = view.mass[physics1];
+            let m2 = view.mass[physics2];
+            let total_mass = m1 + m2;
+
+            // Move the two objects linearly away from each other along the contact normal.
+            // The distance to move is determined by the relative masses of the two objects,
+            // and the penetration depth.
+            let obj1_move_dist = (m1 / total_mass) * contact.penetration_depth;
+            let obj2_move_dist = (m2 / total_mass) * contact.penetration_depth;
+
+            // TODO: Implement -= for cgmath Point3?
+            view.position[physics1] += - obj1_move_dist * contact.normal;
+            view.position[physics2] += obj2_move_dist * contact.normal;
         }
     }
 }
