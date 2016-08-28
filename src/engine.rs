@@ -141,10 +141,14 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores) {
     use cgmath::{Point3, Vector3, EuclideanSpace};
 
+    let blue = Color::rgb(0.0, 0.0, 1.0);
+    let red = Color::rgb(1.0, 0.0, 0.0);
+    let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
+
     {
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(0.0, 15.0, 0.0);
-        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_renderable = SceneRenderable { color: blue, .. unit_sphere_renderable(&window, 3) };
         let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
@@ -158,7 +162,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
         // And a light unit sphere
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(0.0, 15.0, 5.0);
-        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_renderable = SceneRenderable{ color: graybrown, .. unit_sphere_renderable(&window, 3) };
         let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
@@ -172,7 +176,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
         // And one more that collides with the heavy sphere
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(5.0, 15.0, 0.0);
-        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_renderable = SceneRenderable { color: red, .. unit_sphere_renderable(&window, 3) };
         let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,

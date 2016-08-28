@@ -59,7 +59,8 @@ pub fn build_renderable(window: &Window,
     SceneRenderable {
         vertices: Rc::new(vertex_buffer),
         normals: Rc::new(normal_buffer),
-        indices: Rc::new(index_buffer)
+        indices: Rc::new(index_buffer),
+        color: Color { r: 0.5, g: 0.5, b: 0.5 }
     }
 }
 

@@ -23,3 +23,6 @@ pub use self::primitives::{
 
 mod window;
 pub use self::window::{Window, Frame};
+
+mod color;
+pub use self::color::{Color};

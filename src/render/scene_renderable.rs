@@ -5,6 +5,7 @@ use store::{Identifier, OneToOneStore};
 
 use std::collections::HashMap;
 use cgmath;
+use render::Color;
 
 #[derive(Copy, Clone, Debug)]
 pub struct RenderVertex {
@@ -78,10 +79,9 @@ pub struct SceneRenderable {
     pub normals: Rc<VertexBuffer<RenderNormal>>,
     pub indices: Rc<IndexBuffer<u32>>,
 
-    // Currently we have no concept of local transform,
-    // but this is natural to implement later
-    // pub localPosition: Vec3<f32>,
-    //pub localRotation: Quaternion;
+    // For now we only have a concept of a single color for the entire
+    // renderable
+    pub color: Color
 }
 
 #[derive(Clone, Copy, Hash, Eq, PartialEq)]

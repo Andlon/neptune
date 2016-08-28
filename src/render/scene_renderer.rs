@@ -152,15 +152,13 @@ impl SceneRenderer {
 
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
-                const NORMAL_COLOR: [f32; 3] = [1.0f32, 0.0, 0.0];
-
                 let model = model_matrix(&transform.position);
                 let uniforms = uniform! {
                     model: model,
                     view: view,
                     perspective: perspective,
                     light_direction: light_direction,
-                    diffuse_color: NORMAL_COLOR
+                    diffuse_color: renderable.color
                 };
 
                 surface.draw(
