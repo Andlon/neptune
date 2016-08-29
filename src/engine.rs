@@ -6,6 +6,7 @@ use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
 use time_keeper::TimeKeeper;
+use std;
 
 pub struct Engine {
     should_continue: bool
@@ -72,24 +73,30 @@ impl Engine {
 
     fn dispatch_messages(&mut self, messages: Vec<Message>, systems: &mut Systems) {
         let mut messages = messages;
+        let mut response = Vec::new();
 
         while !messages.is_empty() {
-            let mut response = Vec::new();
+            response.clear();
             response.extend(systems.input.process_messages(&messages));
             response.extend(systems.camera.process_messages(&messages));
+            response.extend(self.process_messages(&messages));
 
-            for message in messages {
-                match message {
-                    Message::WindowClosed => self.should_continue = false,
-                    _ => ()
-                };
-            }
-
-            messages = response.clone();
+            std::mem::swap(&mut messages, &mut response);
         }
     }
+}
 
-
+impl MessageReceiver for Engine {
+    fn process_messages(&mut self, messages: &[Message]) -> Vec<Message> {
+        let mut response = Vec::new();
+        for message in messages {
+            match message.clone() {
+                Message::WindowClosed => self.should_continue = false,
+                _ => ()
+            };
+        }
+        response
+    }
 }
 
 fn prepare_component_stores() -> ComponentStores {
