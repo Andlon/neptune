@@ -27,15 +27,6 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     ]
 }
 
-fn model_matrix(position: &Point3<f32>) -> [[f32; 4]; 4] {
-    [
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, 1.0, 0.0],
-        [position.x, position.y, position.z, 1.0f32]
-    ]
-}
-
 pub struct SceneRenderer {
     program: glium::Program,
 }
@@ -152,7 +143,7 @@ impl SceneRenderer {
 
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
-                let model = model_matrix(&transform.position);
+                let model: [[f32; 4]; 4] = transform.model_matrix().into();
                 let uniforms = uniform! {
                     model: model,
                     view: view,

@@ -43,7 +43,8 @@ impl Engine {
         let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
-        initialize_scene(&window, &mut entity_manager, &mut stores);
+        let camera = initialize_scene(&window, &mut entity_manager, &mut stores);
+        systems.camera.set_camera(camera);
 
         while self.should_continue {
             let frame_time = time_keeper.produce_frame();
@@ -129,7 +130,10 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
             Point3::from_vec(vector_form.cast::<f32>())
         };
 
-        let transform = SceneTransform { position: interpolated_pos };
+        let transform = match transforms.lookup(&entity) {
+            Some(current) => SceneTransform { position: interpolated_pos, .. current.clone() },
+            None => SceneTransform { position: interpolated_pos, .. SceneTransform::default() }
+        };
 
         // Note: This implicitly adds a SceneTransform component to any
         // component which has a Physics component, which we deem
@@ -138,7 +142,8 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
     }
 }
 
-fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores) {
+fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores)
+    -> Camera {
     use cgmath::{Point3, Vector3, EuclideanSpace};
 
     let blue = Color::rgb(0.0, 0.0, 1.0);
@@ -147,21 +152,22 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     {
         let sphere_entity = entity_manager.create();
-        let sphere_position = Point3::new(0.0, 15.0, 0.0);
-        let sphere_renderable = SceneRenderable { color: blue, .. unit_sphere_renderable(&window, 3) };
-        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        let sphere_position = Point3::new(0.0, 0.0, 0.0);
+        let sphere_renderable = SceneRenderable { color: blue, .. unit_sphere_renderable(&window, 4) };
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 5.0 };
+        let scale = Vector3::new(5.0, 5.0, 5.0);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             sphere_position,
             Vector3::new(0.0, 0.0, 0.0),
             1.0e11);
+        stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
     {
-        // And a light unit sphere
         let sphere_entity = entity_manager.create();
-        let sphere_position = Point3::new(0.0, 15.0, 5.0);
+        let sphere_position = Point3::new(0.0, 15.0, 15.0);
         let sphere_renderable = SceneRenderable{ color: graybrown, .. unit_sphere_renderable(&window, 3) };
         let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
@@ -173,7 +179,6 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     }
 
     {
-        // And one more that collides with the heavy sphere
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(5.0, 15.0, 0.0);
         let sphere_renderable = SceneRenderable { color: red, .. unit_sphere_renderable(&window, 3) };
@@ -187,7 +192,6 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
     }
 
     {
-        // And one more that collides with the the other spheres
         let sphere_entity = entity_manager.create();
         let sphere_position = Point3::new(0.0, 15.0, -5.0);
         let sphere_renderable = unit_sphere_renderable(&window, 3);
@@ -200,4 +204,18 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
+    {
+        let sphere_entity = entity_manager.create();
+        let sphere_position = Point3::new(0.0, 15.0, 0.0);
+        let sphere_renderable = unit_sphere_renderable(&window, 3);
+        let sphere_collision_model = CollisionModel::SphereModel { radius: 1.0 };
+        stores.scene.set_renderable(sphere_entity, sphere_renderable);
+        stores.physics.set_component_properties(sphere_entity,
+            sphere_position,
+            Vector3::new(0.0, -2.0, 0.0),
+            1.0);
+        stores.collision.set_component_model(sphere_entity, sphere_collision_model);
+    }
+
+    Camera::look_in(Point3::new(25.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()
 }

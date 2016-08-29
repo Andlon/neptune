@@ -80,6 +80,10 @@ impl CameraController {
         self.camera
     }
 
+    pub fn set_camera(&mut self, camera: Camera) {
+        self.camera = camera;
+    }
+
     fn determine_direction(&self) -> Vector3<f32> {
         let mut direction = Vector3::zero();
         let cam = &self.camera;
