@@ -19,6 +19,7 @@ pub use self::primitives::{
     tetrahedron_renderable,
     icosahedron_renderable,
     unit_sphere_renderable,
+    box_renderable
 };
 
 mod window;

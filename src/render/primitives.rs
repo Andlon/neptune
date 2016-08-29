@@ -93,6 +93,14 @@ pub fn unit_sphere_renderable(window: &Window, num_subdivisions: u32)
     build_renderable(window, &mesh, &normals)
 }
 
+pub fn box_renderable(window: &Window, halfx: f32, halfy: f32, halfz: f32)
+    -> SceneRenderable {
+    let mesh = box_mesh(halfx, halfy, halfz).replicate_vertices();
+    let normals = weighted_vertex_normals(&mesh);
+
+    build_renderable(window, &mesh, &normals)
+}
+
 #[cfg(test)]
 mod tests {
 

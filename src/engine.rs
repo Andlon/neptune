@@ -155,6 +155,7 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     let blue = Color::rgb(0.0, 0.0, 1.0);
     let red = Color::rgb(1.0, 0.0, 0.0);
+    let green = Color::rgb(0.0, 1.0, 0.0);
     let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
 
     {
@@ -222,6 +223,16 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
             Vector3::new(0.0, -2.0, 0.0),
             1.0);
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
+    }
+
+    {
+        // Add a big box for testing, for now without physical interaction
+        let box_entity = entity_manager.create();
+        let box_position = Point3::new(0.0, -40.0, 0.0);
+        let box_renderable = SceneRenderable { color: green, .. box_renderable(&window, 5.0, 5.0, 10.0) };
+        let box_transform = SceneTransform { position: box_position, .. SceneTransform::default() };
+        stores.scene.set_renderable(box_entity, box_renderable);
+        stores.transform.set_transform(box_entity, box_transform);
     }
 
     Camera::look_in(Point3::new(25.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()

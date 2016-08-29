@@ -1,5 +1,6 @@
 use geometry::{SurfaceMesh, TriangleIndices};
 use cgmath::*;
+use std;
 
 pub fn tetrahedron<S>(a: Point3<S>, b: Point3<S>, c: Point3<S>, d: Point3<S>) -> SurfaceMesh<S>
     where S: BaseNum
@@ -84,4 +85,55 @@ pub fn unit_sphere(num_subdivisions: u32) -> SurfaceMesh<f32> {
 
     SurfaceMesh::from_indices(normalized_vertices, Vec::from(mesh.triangle_indices()))
         .expect("Triangle indices should all be valid")
+}
+
+pub fn box_mesh(halfx: f32, halfy: f32, halfz: f32) -> SurfaceMesh<f32> {
+    assert!(halfx > 0.0);
+    assert!(halfy > 0.0);
+    assert!(halfz > 0.0);
+
+    let vertices: Vec<Point3<f32>> = vec![
+        // Negative y
+        Point3::new(-halfx, -halfy, halfz),  // 0, top-south-west
+        Point3::new(-halfx, -halfy, -halfz), // 1, bottom-south-west
+        Point3::new(halfx, -halfy, -halfz),  // 2, bottom-south-east
+        Point3::new(halfx, -halfy, halfz),   // 3, top-south-east
+
+        // Positive y
+        Point3::new(-halfx, halfy, halfz),   // 4, top-north-west
+        Point3::new(-halfx, halfy, -halfz),  // 5, bottom-north-west
+        Point3::new(halfx, halfy, -halfz),   // 6, bottom-north-east
+        Point3::new(halfx, halfy, halfz),    // 7, top-north-east
+    ];
+
+    // TODO: Could us a more systematic pattern for the below,
+    // but it shouldn't really matter in the end.
+    let indices = vec![
+        // Southern face
+        TriangleIndices::new(0, 1, 2),
+        TriangleIndices::new(2, 3, 0),
+
+        // Eastern face
+        TriangleIndices::new(3, 2, 7),
+        TriangleIndices::new(2, 6, 7),
+
+        // Northern face
+        TriangleIndices::new(5, 4, 7),
+        TriangleIndices::new(7, 6, 5),
+
+        // Western face
+        TriangleIndices::new(1, 0, 4),
+        TriangleIndices::new(4, 5, 1),
+
+        // Bottom face
+        TriangleIndices::new(6, 2, 1),
+        TriangleIndices::new(6, 1, 5),
+
+        // Top face
+        TriangleIndices::new(0, 3, 7),
+        TriangleIndices::new(7, 4, 0)
+    ];
+
+    SurfaceMesh::from_indices(vertices, indices)
+        .expect("The mesh generated should always be valid.")
 }
