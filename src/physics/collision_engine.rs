@@ -22,8 +22,8 @@ impl CollisionEngine {
                 let entity_i = &collision_store.entities()[i];
                 let entity_j = &collision_store.entities()[j];
 
-                let model_i = &collision_store.models()[i];
-                let model_j = &collision_store.models()[j];
+                let model_i = collision_store.models()[i];
+                let model_j = collision_store.models()[j];
 
                 // TODO: Can't really use unwrap here,
                 // as we cannot assume that a physics component actually exists
@@ -34,13 +34,26 @@ impl CollisionEngine {
                 let pos_i = physics_store.lookup_position(&phys_id_i);
                 let pos_j = physics_store.lookup_position(&phys_id_j);
 
+                use physics::CollisionModel as Model;
+
                 let possible_contact = match (model_i, model_j) {
-                    (&CollisionModel::SphereModel { radius: r_i },
-                     &CollisionModel::SphereModel { radius: r_j })
+                    (Model::Sphere { radius: r_i }, Model::Sphere { radius: r_j })
                      => {
                         let sphere_i = Sphere { radius: r_i, center: pos_i };
                         let sphere_j = Sphere { radius: r_j, center: pos_j };
                         contact_for_spheres(entity_i, entity_j, sphere_i, sphere_j)
+                    },
+                    (Model::Box { halfSize: size1 }, Model::Box { halfSize: size2 })
+                    => {
+                        // TODO: Implement Box-Box collisions
+                        None
+                    },
+                    (Model::Box { halfSize: box_size }, Model::Sphere { radius: sphere_radius })
+                    |
+                    (Model::Sphere { radius: sphere_radius }, Model::Box { halfSize: box_size })
+                    => {
+                        // Todo: Implement Box-Sphere collisions
+                        None
                     }
                 };
 

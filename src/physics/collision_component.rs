@@ -1,12 +1,14 @@
-use cgmath::Point3;
+use cgmath::{Point3, Vector3};
 use geometry::*;
 use entity::Entity;
 use std::collections::HashMap;
 
 pub type CollisionComponentId = usize;
 
+#[derive(Copy, Clone, Debug)]
 pub enum CollisionModel {
-    SphereModel { radius: f64 }
+    Sphere { radius: f64 },
+    Box { halfSize: Vector3<f64> }
 }
 
 pub struct CollisionComponentStore {
