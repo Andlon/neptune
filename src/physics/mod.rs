@@ -1,5 +1,5 @@
 mod physics_component;
-pub use self::physics_component::PhysicsComponentStore;
+pub use self::physics_component::{PhysicsComponentId, PhysicsComponentStore};
 
 mod physics_engine;
 pub use self::physics_engine::PhysicsEngine;
@@ -12,3 +12,6 @@ pub use self::contact_collection::*;
 
 mod collision_engine;
 pub use self::collision_engine::*;
+
+mod contacts;
+pub use self::contacts::*;
