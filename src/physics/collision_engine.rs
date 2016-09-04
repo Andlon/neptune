@@ -41,7 +41,7 @@ impl CollisionEngine {
                      => {
                         let sphere_i = Sphere { radius: r_i, center: pos_i };
                         let sphere_j = Sphere { radius: r_j, center: pos_j };
-                        contact_for_spheres(sphere_i, sphere_j)
+                        contact_sphere_sphere(sphere_i, sphere_j)
                             .map(|data| Contact { 
                                 objects: (entity_i, entity_j),
                                 physics_components: (phys_id_i, phys_id_j),

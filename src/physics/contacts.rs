@@ -17,7 +17,7 @@ pub struct Contact {
     pub data: ContactData
 }
 
-pub fn contact_for_spheres(sphere1: Sphere<f64>, sphere2: Sphere<f64>) -> Option<ContactData> {
+pub fn contact_sphere_sphere(sphere1: Sphere<f64>, sphere2: Sphere<f64>) -> Option<ContactData> {
     let r = sphere2.center - sphere1.center;
     let r2 = r.magnitude2();
     if r2 <= (sphere1.radius + sphere2.radius).powi(2) {
@@ -37,25 +37,25 @@ pub fn contact_for_spheres(sphere1: Sphere<f64>, sphere2: Sphere<f64>) -> Option
 }
 
 mod tests {
-    use super::contact_for_spheres;
+    use super::contact_sphere_sphere;
     use geometry::Sphere;
     use cgmath::{Point3, Vector3, EuclideanSpace, InnerSpace, MetricSpace};
 
     #[test]
-    pub fn contact_for_spheres_no_collision() {
+    pub fn contact_sphere_sphere_no_collision() {
         let sphere1 = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
         let sphere2 = Sphere { radius: 1.0, center: Point3::new(3.0, 0.0, 0.0) };
 
-        let contact_data = contact_for_spheres(sphere1, sphere2);
+        let contact_data = contact_sphere_sphere(sphere1, sphere2);
         assert!(contact_data.is_none());
     }
 
     #[test]
-    pub fn contact_for_spheres_collision() {
+    pub fn contact_sphere_sphere_collision() {
         let sphere1 = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
         let sphere2 = Sphere { radius: 1.0, center: Point3::new(1.5, 0.0, 0.0) };
 
-        let contact_data = contact_for_spheres(sphere1, sphere2);
+        let contact_data = contact_sphere_sphere(sphere1, sphere2);
         assert!(contact_data.is_some());
 
         let contact_data = contact_data.unwrap();
@@ -65,11 +65,11 @@ mod tests {
     }
 
         #[test]
-    pub fn contact_for_spheres_complete_overlap() {
+    pub fn contact_sphere_sphere_complete_overlap() {
         let sphere1 = Sphere { radius: 1.0, center: Point3::origin() };
         let sphere2 = Sphere { radius: 1.0, center: Point3::origin() };
 
-        let contact_data = contact_for_spheres(sphere1, sphere2);
+        let contact_data = contact_sphere_sphere(sphere1, sphere2);
         assert!(contact_data.is_some());
 
         let contact_data = contact_data.unwrap();
