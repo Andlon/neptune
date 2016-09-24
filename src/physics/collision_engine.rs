@@ -1,5 +1,5 @@
 use physics::*;
-use geometry::{OverlapsWith, Sphere};
+use geometry::{OverlapsWith, Sphere, Cuboid};
 use message::Message;
 use entity::Entity;
 use cgmath::{InnerSpace, MetricSpace};
@@ -35,12 +35,12 @@ impl CollisionEngine {
                 let pos_j = physics_store.lookup_position(&phys_id_j);
 
                 use physics::CollisionModel as Model;
-
                 let possible_contact = match (model_i, model_j) {
-                    (Model::Sphere { radius: r_i }, Model::Sphere { radius: r_j })
+                    // Sphere-sphere
+                    (Model::Sphere(sphere1_model), Model::Sphere(sphere2_model))
                      => {
-                        let sphere_i = Sphere { radius: r_i, center: pos_i };
-                        let sphere_j = Sphere { radius: r_j, center: pos_j };
+                        let sphere_i = Sphere { radius: sphere1_model.radius, center: pos_i };
+                        let sphere_j = Sphere { radius: sphere2_model.radius, center: pos_j };
                         contact_sphere_sphere(sphere_i, sphere_j)
                             .map(|data| Contact { 
                                 objects: (entity_i, entity_j),
@@ -48,17 +48,34 @@ impl CollisionEngine {
                                 data: data
                             })
                     },
-                    (Model::Box { halfSize: size1 }, Model::Box { halfSize: size2 })
+                    // Cuboid-cuboid
+                    (Model::Cuboid(cuboid1), Model::Cuboid(cuboid2))
                     => {
-                        // TODO: Implement Box-Box collisions
+                        // TODO: Implement Cuboid-cuboid collisions
                         None
                     },
-                    (Model::Box { halfSize: box_size }, Model::Sphere { radius: sphere_radius })
-                    |
-                    (Model::Sphere { radius: sphere_radius }, Model::Box { halfSize: box_size })
+                    // Cuboid-sphere
+                    (Model::Sphere(sphere_model), Model::Cuboid(cuboid_model))
                     => {
-                        // Todo: Implement Box-Sphere collisions
-                        None
+                        let sphere = Sphere { radius: sphere_model.radius, center: pos_i };
+                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: cuboid_model.rotation, center: pos_j };
+                        contact_sphere_cuboid(sphere, cuboid)
+                            .map(|data| Contact {
+                                objects: (entity_i, entity_j),
+                                physics_components: (phys_id_i, phys_id_j),
+                                data: data
+                            })
+                    }
+                    (Model::Cuboid(cuboid_model), Model::Sphere(sphere_model))
+                    => {
+                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: cuboid_model.rotation, center: pos_i };
+                        let sphere = Sphere { radius: sphere_model.radius, center: pos_j };
+                        contact_sphere_cuboid(sphere, cuboid)
+                            .map(|data| Contact {
+                                objects: (entity_i, entity_j),
+                                physics_components: (phys_id_i, phys_id_j),
+                                data: data
+                            })
                     }
                 };
 
