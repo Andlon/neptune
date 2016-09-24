@@ -1,5 +1,5 @@
 mod physics_component;
-pub use self::physics_component::{PhysicsComponentId, PhysicsComponentStore};
+pub use self::physics_component::*;
 
 mod physics_engine;
 pub use self::physics_engine::PhysicsEngine;
