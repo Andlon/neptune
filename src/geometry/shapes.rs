@@ -25,6 +25,8 @@ impl<S> Cuboid<S> where S: BaseFloat {
             let dist_along_axis = local_point.x;
             if dist_along_axis > self.halfSize.x {
                 self.halfSize.x
+            } else if dist_along_axis < -self.halfSize.x {
+                -self.halfSize.x
             } else {
                 dist_along_axis
             }
@@ -34,6 +36,8 @@ impl<S> Cuboid<S> where S: BaseFloat {
             let dist_along_axis = local_point.y;
             if dist_along_axis > self.halfSize.y {
                 self.halfSize.y
+            } else if dist_along_axis < -self.halfSize.y {
+                -self.halfSize.y
             } else {
                 dist_along_axis
             }
@@ -43,6 +47,8 @@ impl<S> Cuboid<S> where S: BaseFloat {
             let dist_along_axis = local_point.z;
             if dist_along_axis > self.halfSize.z {
                 self.halfSize.z
+            } else if dist_along_axis < -self.halfSize.z {
+                -self.halfSize.z
             } else {
                 dist_along_axis
             }
@@ -137,4 +143,5 @@ mod tests {
     }
 
     // TODO: Implement tests for arbitrary cuboid. Perhaps use quickcheck or similar property-based testing?
+    // TODO: Also write tests where the sphere is on the 'negative' side of the axes
 }
