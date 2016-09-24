@@ -20,8 +20,10 @@ pub struct PhysicsComponentsView<'a> {
 
     // Intermediate properties for integration and interpolation
     pub acceleration: &'a [Vector3<f64>],
+    pub angular_acceleration: &'a [Vector3<f64>],
     pub prev_position: &'a [Point3<f64>],
-    pub prev_acceleration: &'a [Vector3<f64>]
+    pub prev_acceleration: &'a [Vector3<f64>],
+    pub prev_angular_acceleration: &'a [Vector3<f64>]
 }
 
 pub struct MutablePhysicsComponentsView<'a> {
@@ -37,8 +39,10 @@ pub struct MutablePhysicsComponentsView<'a> {
 
     // Intermediate properties for integration and interpolation
     pub acceleration: &'a mut [Vector3<f64>],
+    pub angular_acceleration: &'a mut [Vector3<f64>],
     pub prev_position: &'a mut [Point3<f64>],
-    pub prev_acceleration: &'a mut [Vector3<f64>]
+    pub prev_acceleration: &'a mut [Vector3<f64>],
+    pub prev_angular_acceleration: &'a mut [Vector3<f64>]
 }
 
 pub struct PhysicsComponentStore {
@@ -54,8 +58,10 @@ pub struct PhysicsComponentStore {
 
     // Intermediate properties for integration and interpolation
     acceleration: Vec<Vector3<f64>>,
+    angular_acceleration: Vec<Vector3<f64>>,
     prev_position: Vec<Point3<f64>>,
     prev_acceleration: Vec<Vector3<f64>>,
+    prev_angular_acceleration: Vec<Vector3<f64>>,
 
     entity_map: HashMap<Entity, PhysicsComponentId>,
 }
@@ -92,8 +98,10 @@ impl PhysicsComponentStore {
             mass: Vec::new(),
             inertia: Vec::new(),
             acceleration: Vec::new(),
+            angular_acceleration: Vec::new(),
             prev_position: Vec::new(),
             prev_acceleration: Vec::new(),
+            prev_angular_acceleration: Vec::new(),
             entity_map: HashMap::new()
         }
     }
@@ -170,8 +178,10 @@ impl PhysicsComponentStore {
             mass: &self.mass,
             inertia: &self.inertia,
             acceleration: &self.acceleration,
+            angular_acceleration: &self.angular_acceleration,
             prev_position: &self.prev_position,
-            prev_acceleration: &self.prev_acceleration
+            prev_acceleration: &self.prev_acceleration,
+            prev_angular_acceleration: &self.prev_angular_acceleration
         }
     }
 
@@ -184,8 +194,10 @@ impl PhysicsComponentStore {
             mass: &mut self.mass,
             inertia: &mut self.inertia,
             acceleration: &mut self.acceleration,
+            angular_acceleration: &mut self.angular_acceleration,
             prev_position: &mut self.prev_position,
-            prev_acceleration: &mut self.prev_acceleration
+            prev_acceleration: &mut self.prev_acceleration,
+            prev_angular_acceleration: &mut self.prev_angular_acceleration
         }
     }
 }
