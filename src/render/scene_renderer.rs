@@ -137,7 +137,7 @@ impl SceneRenderer {
         // so that the direction of the light does not change as
         // the camera orientation changes.
         let light_direction: [f32; 3] = {
-            let dir4 = view_matrix * Vector4::new(1.0f32, 1.0f32, 0.0, 0.0);
+            let dir4 = view_matrix * Vector4::new(1.0f32, 1.5f32, 0.2, 0.0).normalize();
             dir4.truncate().into()
         };
 
