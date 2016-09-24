@@ -2,35 +2,33 @@ use store::OneToOneStore;
 use entity::Entity;
 use std::collections::HashMap;
 
-use cgmath::{Point3, Vector3, Matrix4, EuclideanSpace};
+use cgmath::{Point3, Vector3, Matrix4, EuclideanSpace, Quaternion};
 
 #[derive(Copy, Clone, Debug)]
 pub struct SceneTransform {
     pub position: Point3<f32>,
-    pub scale: Vector3<f32>
-
-    // TODO: Support rotation
+    pub scale: Vector3<f32>,
+    pub orientation: Quaternion<f32>
 }
 
 impl Default for SceneTransform {
     fn default() -> Self {
         SceneTransform {
             position: Point3::origin(),
-            scale: Vector3::new(1.0, 1.0, 1.0)
+            scale: Vector3::new(1.0, 1.0, 1.0),
+            orientation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
         }
     }
 }
 
 impl SceneTransform {
     pub fn model_matrix(&self) -> Matrix4<f32> {
-        let pos = &self.position;
-        let scale = &self.scale;
-        Matrix4::from([
-            [scale.x, 0.0,     0.0,     0.0],
-            [0.0,     scale.y, 0.0,     0.0],
-            [0.0,     0.0,     scale.z, 0.0],
-            [pos.x,   pos.y,   pos.z,   1.0]
-        ])
+        // This is a very expensive way to do it, but it's easy and straightforward.
+        // Fix when it becomes a bottleneck.
+        let translate = Matrix4::from_translation(self.position.to_vec());
+        let scale = Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);
+        let rot = Matrix4::from(self.orientation);
+        translate * rot * scale
     }
 }
 

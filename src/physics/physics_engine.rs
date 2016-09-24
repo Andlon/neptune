@@ -1,9 +1,16 @@
 use physics::PhysicsComponentStore;
-use cgmath::{Point3, Vector3, InnerSpace, Zero};
+use cgmath::{Point3, Vector3, InnerSpace, Zero, Matrix3, Quaternion, Basis3, Matrix};
 use itertools;
 
 pub struct PhysicsEngine {
 
+}
+
+fn world_inverse_intertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
+    -> Matrix3<f64> {
+    let body_to_world = Matrix3::from(orientation);
+    let world_to_body = body_to_world.transpose();
+    body_to_world * local_inertia_inv * world_to_body
 }
 
 impl PhysicsEngine {
@@ -15,14 +22,18 @@ impl PhysicsEngine {
 
     pub fn simulate(&mut self, dt: f64, components: &mut PhysicsComponentStore) {
         assert!(dt >= 0.0);
+        components.swap_buffers();
+
+        self.integrate_linear_motion(dt, components);
+        self.integrate_angular_motion(dt, components);
+    }
+
+    fn integrate_linear_motion(&mut self, dt: f64, components: &mut PhysicsComponentStore) {
+        let num_components = components.num_components();
+        let mut view = components.mutable_view();
 
         // The following is an implementation of Velocity Verlet.
         // See https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
-
-        components.swap_buffers();
-
-        let num_components = components.num_components();
-        let mut view = components.mutable_view();
 
         // Update positions
         for i in 0 .. num_components {
@@ -44,6 +55,34 @@ impl PhysicsEngine {
             let a = &view.acceleration[i];
             let v = &mut view.velocity[i];
             *v += 0.5 * dt * (a_prev + a);
+        }
+    }
+
+    fn integrate_angular_motion(&mut self, dt: f64, components: &mut PhysicsComponentStore) {
+        let num_components = components.num_components();
+        let mut view = components.mutable_view();
+
+        // The integration for angular motion is a lot more complicated in general,
+        // so we can't easily apply something similar to the Velocity Verlet algorithm
+        // for linear motion. For now, we just use simple euler integrators instead.
+
+        // Update angular momentum
+        for i in 0 .. num_components {
+            // TODO: Implement torque accumulators
+            let torque = Vector3::zero();
+            view.angular_momentum[i] = view.angular_momentum[i] + dt * torque;
+        }
+
+        // Update orientation
+        for i in 0 .. num_components {
+            let orientation = view.prev_orientation[i];
+            let inv_inertia_body = view.inv_inertia_body[i];
+            let inverse_world_inertia = world_inverse_intertia(&inv_inertia_body, orientation);
+            let angular_momentum = view.angular_momentum[i];
+            let angular_velocity = inverse_world_inertia * angular_momentum;
+            let angular_velocity_quat = Quaternion::from_sv(0.0, angular_velocity);
+            let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
+            view.orientation[i] = new_orientation.normalize();
         }
     }
 

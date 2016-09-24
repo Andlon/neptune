@@ -34,6 +34,9 @@ impl CollisionEngine {
                 let pos_i = physics_store.lookup_position(&phys_id_i);
                 let pos_j = physics_store.lookup_position(&phys_id_j);
 
+                let orient_i = physics_store.lookup_orientation(&phys_id_i);
+                let orient_j = physics_store.lookup_orientation(&phys_id_j);
+
                 use physics::CollisionModel as Model;
                 let possible_contact = match (model_i, model_j) {
                     // Sphere-sphere
@@ -58,7 +61,7 @@ impl CollisionEngine {
                     (Model::Sphere(sphere_model), Model::Cuboid(cuboid_model))
                     => {
                         let sphere = Sphere { radius: sphere_model.radius, center: pos_i };
-                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: cuboid_model.rotation, center: pos_j };
+                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: orient_j * cuboid_model.rotation, center: pos_j };
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_i, entity_j),
@@ -68,7 +71,7 @@ impl CollisionEngine {
                     }
                     (Model::Cuboid(cuboid_model), Model::Sphere(sphere_model))
                     => {
-                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: cuboid_model.rotation, center: pos_i };
+                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: orient_i * cuboid_model.rotation, center: pos_i };
                         let sphere = Sphere { radius: sphere_model.radius, center: pos_j };
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {

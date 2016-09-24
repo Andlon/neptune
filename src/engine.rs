@@ -123,23 +123,39 @@ fn prepare_systems(window: &Window) -> Systems {
 fn interpolate_transforms(transforms: &mut SceneTransformStore,
                           physics: &PhysicsComponentStore,
                           fraction: f64) {
-    use cgmath::{Point3, EuclideanSpace};
+    use cgmath::{Point3, EuclideanSpace, Vector4, Quaternion};
     assert!(fraction >= 0.0 && fraction <= 1.0);
 
     for (&entity, &component) in physics.entity_component_pairs() {
-        let prev_pos = physics.lookup_prev_position(&component).to_vec();
-        let current_pos = physics.lookup_position(&component).to_vec();
-
         let interpolated_pos = {
+            let prev_pos = physics.lookup_prev_position(&component).to_vec();
+            let current_pos = physics.lookup_position(&component).to_vec();
+
             // We have to work around the fact that cgmath does not implement .cast()
             // for Point3<S>, but only for Vector3<S>.
             let vector_form = fraction * current_pos + (1.0 - fraction) * prev_pos;
             Point3::from_vec(vector_form.cast::<f32>())
         };
 
-        let transform = match transforms.lookup(&entity) {
-            Some(current) => SceneTransform { position: interpolated_pos, .. current.clone() },
-            None => SceneTransform { position: interpolated_pos, .. SceneTransform::default() }
+        let interpolated_orientation: Quaternion<f32> = {
+            let prev_orient = physics.lookup_prev_orientation(&component);
+            let current_orient = physics.lookup_orientation(&component);
+            let orient = prev_orient.nlerp(current_orient, fraction);
+
+            // This is very awkward, but there is no easy way to cast a
+            // Quaternion<f64> to Quaternion<f32>
+            Quaternion::from_sv(orient.s as f32, orient.v.cast())
+        };
+
+        let current_transform = match transforms.lookup(&entity) {
+            Some(current) => current.clone(),
+            None => SceneTransform::default()
+        };
+
+        let transform = SceneTransform {
+            position: interpolated_pos,
+            orientation: interpolated_orientation,
+            .. current_transform
         };
 
         // Note: This implicitly adds a SceneTransform component to any
@@ -151,7 +167,7 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores)
     -> Camera {
-    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion};
+    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, InnerSpace};
 
     let blue = Color::rgb(0.0, 0.0, 1.0);
     let red = Color::rgb(1.0, 0.0, 0.0);
@@ -241,8 +257,11 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     {
         // Add a big box for testing
-        let box_entity = entity_manager.create();
+        let box_mass = 1.0;
+        let box_inertia_tensor = box_mass * Matrix3::from_diagonal(Vector3::new(500.0, 500.0, 200.0)) / 12.0;
         let box_position = Point3::new(0.0, -40.0, 0.0);
+
+        let box_entity = entity_manager.create();
         let box_renderable = SceneRenderable { color: green, .. box_renderable(&window, 5.0, 5.0, 10.0) };
         let box_collision_model = CollisionModel::cuboid(Vector3::new(5.0, 5.0, 10.0), Quaternion::new(1.0, 0.0, 0.0, 0.0));
         stores.scene.set_renderable(box_entity, box_renderable);
@@ -250,6 +269,8 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
             PhysicsComponent {
                 position: box_position,
                 mass: 1.0,
+                angular_velocity: 2.0 * Vector3::new(1.0, 1.0, 1.0).normalize(),
+                inertia_body: box_inertia_tensor,
                 .. PhysicsComponent::default()
             });
         stores.collision.set_component_model(box_entity, box_collision_model);
