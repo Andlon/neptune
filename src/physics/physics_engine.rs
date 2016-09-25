@@ -6,7 +6,7 @@ pub struct PhysicsEngine {
 
 }
 
-fn world_inverse_intertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
+fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
     -> Matrix3<f64> {
     let body_to_world = Matrix3::from(orientation);
     let world_to_body = body_to_world.transpose();
@@ -77,7 +77,7 @@ impl PhysicsEngine {
         for i in 0 .. num_components {
             let orientation = view.prev_orientation[i];
             let inv_inertia_body = view.inv_inertia_body[i];
-            let inverse_world_inertia = world_inverse_intertia(&inv_inertia_body, orientation);
+            let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
             let angular_momentum = view.angular_momentum[i];
             let angular_velocity = inverse_world_inertia * angular_momentum;
             let angular_velocity_quat = Quaternion::from_sv(0.0, angular_velocity);
