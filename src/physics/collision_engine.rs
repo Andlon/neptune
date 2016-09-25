@@ -2,9 +2,18 @@ use physics::*;
 use geometry::{OverlapsWith, Sphere, Cuboid};
 use message::Message;
 use entity::Entity;
-use cgmath::{InnerSpace, MetricSpace};
+use cgmath::{InnerSpace, MetricSpace, Matrix3, Quaternion, Matrix, SquareMatrix};
 
 pub struct CollisionEngine;
+
+// As a quick hack, this is merely copy-pasted from physics_component.rs.
+// Need to find a better way to deal with this
+fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
+    -> Matrix3<f64> {
+    let body_to_world = Matrix3::from(orientation);
+    let world_to_body = body_to_world.transpose();
+    body_to_world * local_inertia_inv * world_to_body
+}
 
 impl CollisionEngine {
     pub fn new() -> CollisionEngine {
@@ -104,21 +113,70 @@ fn resolve_velocities(
 {
     let mut view = physics_store.mutable_view();
     for contact in contacts.contacts() {
+        // TODO: Move restituion into contact
+        let restitution = 1.0;
+
+        // Use the following terminology (suffixed by 1 or 2):
+        // v: linear velocity (i.e. velocity of mass center)
+        // m: mass
+        // w: angular velocity
+        // r: contact point relative to center of mass
+        // i_inv: inverse inertia tensor (in world coordinates)
+        // v_p: velocity at point of contact (includes angular contribution)
+        //
+        // The mathematics here are based on the following Wikipedia article:
+        // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
+
         let (physics1, physics2) = contact.physics_components;
+        let orientation1 = view.orientation[physics1];
+        let orientation2 = view.orientation[physics2];
         let v1 = view.velocity[physics1];
         let v2 = view.velocity[physics2];
         let m1 = view.mass[physics1];
         let m2 = view.mass[physics2];
-        let v_closing = (v1 - v2).dot(contact.data.normal);
+        let r1 = contact.data.point - view.position[physics1];
+        let r2 = contact.data.point - view.position[physics2];
+        let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
+        let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
+        let w1 = i_inv1 * view.angular_momentum[physics1];
+        let w2 = i_inv2 * view.angular_momentum[physics2];
+        let v_p1 = v1 + w1.cross(r1);
+        let v_p2 = v2 + w1.cross(r2);
 
-        // We only need to apply an impulse if the objects
-        // are actually on a collision course
-        if v_closing > 0.0 {
-            let j_r = (2.0 * v_closing / (1.0 / m1 + 1.0 / m2)) * contact.data.normal;
-            let v1_post = v1 - j_r / m1;
-            let v2_post = v2 + j_r / m2;
+        // Let n denote the contact normal
+        let n = contact.data.normal;
+
+        // Define the "relative velocity" at the point of impact
+        let v_r = v_p2 - v_p1;
+
+        // The separating velocity is the projection of the relative velocity
+        // onto the contact normal.
+        let v_separating = v_r.dot(n);
+
+        // If v_separating is non-negative, the objects are not moving
+        // towards each other, and we do not need to add any corrective impulse.
+        if v_separating < 0.0 {
+            // j_r denotes the relative (reaction) impulse
+            let j_r = {
+                let linear_denominator = 1.0 / m1 + 1.0 / m2;
+                let angular_denominator1 = i_inv1 * r1.cross(n).cross(r1);
+                let angular_denominator2 = i_inv2 * r2.cross(n).cross(r2);
+                let angular_denominator = (angular_denominator1 + angular_denominator2).dot(n);
+                let numerator = -(1.0 + restitution) * v_separating;
+                numerator / (linear_denominator + angular_denominator)
+            };
+
+            // Compute post-collision velocities
+            let v1_post = v1 - j_r / m1 * n;
+            let v2_post = v2 + j_r / m2 * n;
+            let w1_post = w1 - j_r * i_inv1 * r1.cross(n);
+            let w2_post = w2 + j_r * i_inv2 * r2.cross(n);
             view.velocity[physics1] = v1_post;
             view.velocity[physics2] = v2_post;
+
+            // TODO: Avoid the inversions here
+            view.angular_momentum[physics1] = i_inv1.invert().unwrap() * w1_post;
+            view.angular_momentum[physics2] = i_inv2.invert().unwrap() * w2_post;
         }
     }
 }
