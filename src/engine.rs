@@ -167,7 +167,10 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores)
     -> Camera {
-    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, InnerSpace};
+    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, InnerSpace, Zero};
+
+    use std::f64;
+    use std::f32;
 
     let blue = Color::rgb(0.0, 0.0, 1.0);
     let red = Color::rgb(1.0, 0.0, 0.0);
@@ -176,15 +179,22 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     {
         let sphere_entity = entity_manager.create();
-        let sphere_position = Point3::new(0.0, 0.0, 0.0);
-        let sphere_renderable = SceneRenderable { color: blue, .. unit_sphere_renderable(&window, 4) };
-        let sphere_collision_model = CollisionModel::sphere(5.0);
-        let scale = Vector3::new(5.0, 5.0, 5.0);
+        let sphere_position = Point3::origin();
+        let sphere_velocity = Vector3::zero();
+        let sphere_mass = 1.0e11;
+        let sphere_radius = 5.0;
+        let sphere_color = blue;
+        let sphere_inertia = (2.0 / 5.0) * sphere_mass * sphere_radius * sphere_radius * Matrix3::identity();
+        let sphere_renderable = SceneRenderable { color: sphere_color, .. unit_sphere_renderable(&window, 4) };
+        let sphere_collision_model = CollisionModel::sphere(sphere_radius);
+        let scale = Vector3::new(sphere_radius as f32, sphere_radius as f32, sphere_radius as f32);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             PhysicsComponent {
                 position: sphere_position,
-                mass: 1.0e11,
+                velocity: sphere_velocity,
+                mass: sphere_mass,
+                inertia_body: sphere_inertia,
                 .. PhysicsComponent::default()
             });
         stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
@@ -193,65 +203,97 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     {
         let sphere_entity = entity_manager.create();
+        let sphere_mass = 1.0;
+        let sphere_radius = 1.0;
+        let sphere_color = graybrown;
         let sphere_position = Point3::new(0.0, 15.0, 15.0);
-        let sphere_renderable = SceneRenderable{ color: graybrown, .. unit_sphere_renderable(&window, 3) };
-        let sphere_collision_model = CollisionModel::sphere(1.0);
+        let sphere_velocity = Vector3::new(0.0, 2.5, 0.0);
+        let sphere_inertia = (2.0 / 5.0) * sphere_mass * sphere_radius * sphere_radius * Matrix3::identity();
+        let sphere_renderable = SceneRenderable { color: sphere_color, .. unit_sphere_renderable(&window, 3) };
+        let sphere_collision_model = CollisionModel::sphere(sphere_radius);
+        let scale = Vector3::new(sphere_radius as f32, sphere_radius as f32, sphere_radius as f32);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             PhysicsComponent {
                 position: sphere_position,
-                velocity: Vector3::new(0.0, 2.5, 0.0),
-                mass: 1.0,
+                velocity: sphere_velocity,
+                mass: sphere_mass,
+                inertia_body: sphere_inertia,
                 .. PhysicsComponent::default()
             });
+        stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
     {
         let sphere_entity = entity_manager.create();
+        let sphere_mass = 1.0;
+        let sphere_radius = 1.0;
+        let sphere_color = red;
         let sphere_position = Point3::new(5.0, 15.0, 0.0);
-        let sphere_renderable = SceneRenderable { color: red, .. unit_sphere_renderable(&window, 3) };
-        let sphere_collision_model = CollisionModel::sphere(1.0);
+        let sphere_velocity = Vector3::new(0.0, 0.0, 1.5);
+        let sphere_inertia = (2.0 / 5.0) * sphere_mass * sphere_radius * sphere_radius * Matrix3::identity();
+        let sphere_renderable = SceneRenderable { color: sphere_color, .. unit_sphere_renderable(&window, 3) };
+        let sphere_collision_model = CollisionModel::sphere(sphere_radius);
+        let scale = Vector3::new(sphere_radius as f32, sphere_radius as f32, sphere_radius as f32);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             PhysicsComponent {
                 position: sphere_position,
-                velocity: Vector3::new(0.0, 0.0, 1.5),
-                mass: 1.0,
+                velocity: sphere_velocity,
+                mass: sphere_mass,
+                inertia_body: sphere_inertia,
                 .. PhysicsComponent::default()
             });
+        stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
     {
         let sphere_entity = entity_manager.create();
+        let sphere_mass = 1.0;
+        let sphere_radius = 1.0;
+        let sphere_color = red;
         let sphere_position = Point3::new(0.0, 15.0, -5.0);
-        let sphere_renderable = unit_sphere_renderable(&window, 3);
-        let sphere_collision_model = CollisionModel::sphere(1.0);
+        let sphere_velocity = Vector3::new(0.0, 1.0, 2.0);
+        let sphere_inertia = (2.0 / 5.0) * sphere_mass * sphere_radius * sphere_radius * Matrix3::identity();
+        let sphere_renderable = SceneRenderable { color: sphere_color, .. unit_sphere_renderable(&window, 3) };
+        let sphere_collision_model = CollisionModel::sphere(sphere_radius);
+        let scale = Vector3::new(sphere_radius as f32, sphere_radius as f32, sphere_radius as f32);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             PhysicsComponent {
                 position: sphere_position,
-                velocity: Vector3::new(0.0, 1.0, 2.0),
-                mass: 1.0,
+                velocity: sphere_velocity,
+                mass: sphere_mass,
+                inertia_body: sphere_inertia,
                 .. PhysicsComponent::default()
             });
+        stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
     {
         let sphere_entity = entity_manager.create();
+        let sphere_mass = 1.0;
+        let sphere_radius = 1.0;
+        let sphere_color = red;
         let sphere_position = Point3::new(0.0, 15.0, 0.0);
-        let sphere_renderable = unit_sphere_renderable(&window, 3);
-        let sphere_collision_model = CollisionModel::sphere(1.0);
+        let sphere_velocity = Vector3::new(0.0, -2.0, 0.0);
+        let sphere_inertia = (2.0 / 5.0) * sphere_mass * sphere_radius * sphere_radius * Matrix3::identity();
+        let sphere_renderable = SceneRenderable { color: sphere_color, .. unit_sphere_renderable(&window, 3) };
+        let sphere_collision_model = CollisionModel::sphere(sphere_radius);
+        let scale = Vector3::new(sphere_radius as f32, sphere_radius as f32, sphere_radius as f32);
         stores.scene.set_renderable(sphere_entity, sphere_renderable);
         stores.physics.set_component_properties(sphere_entity,
             PhysicsComponent {
                 position: sphere_position,
-                velocity: Vector3::new(0.0, -2.0, 0.0),
-                mass: 1.0,
+                velocity: sphere_velocity,
+                mass: sphere_mass,
+                inertia_body: sphere_inertia,
                 .. PhysicsComponent::default()
             });
+        stores.transform.set_transform(sphere_entity, SceneTransform { scale: scale, .. SceneTransform::default() });
         stores.collision.set_component_model(sphere_entity, sphere_collision_model);
     }
 
@@ -268,8 +310,8 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
         stores.physics.set_component_properties(box_entity,
             PhysicsComponent {
                 position: box_position,
-                mass: 1.0,
-                angular_velocity: 2.0 * Vector3::new(1.0, 1.0, 1.0).normalize(),
+                mass: 0.5,
+                //angular_velocity: 2.0 * Vector3::new(1.0, 1.0, 1.0).normalize(),
                 inertia_body: box_inertia_tensor,
                 .. PhysicsComponent::default()
             });
