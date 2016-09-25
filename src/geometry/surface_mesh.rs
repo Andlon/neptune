@@ -22,13 +22,31 @@ pub struct Triangle<S> where S: BaseNum {
     pub c: Point3<S>
 }
 
-impl<S> ApproxEq for Triangle<S> where S: BaseFloat {
-    type Epsilon = S;
+impl<S> ApproxEq for Triangle<S> where S: BaseFloat + ApproxEq {
+    type Epsilon = S::Epsilon;
 
-    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
-        self.a.approx_eq_eps(&other.a, epsilon)
-        && self.b.approx_eq_eps(&other.b, epsilon)
-        && self.c.approx_eq_eps(&other.c, epsilon)
+    fn default_epsilon() -> Self::Epsilon {
+        S::default_epsilon()
+    }
+
+    fn default_max_relative() -> Self::Epsilon {
+        S::default_max_relative()
+    }
+
+    fn default_max_ulps() -> u32 {
+        S::default_max_ulps()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon) -> bool {
+        self.a.relative_eq(&other.a, epsilon, max_relative)
+        && self.b.relative_eq(&other.b, epsilon, max_relative)
+        && self.c.relative_eq(&other.c, epsilon, max_relative)
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {
+        self.a.ulps_eq(&other.a, epsilon, max_ulps)
+        && self.b.ulps_eq(&other.b, epsilon, max_ulps)
+        && self.c.ulps_eq(&other.c, epsilon, max_ulps)
     }
 }
 
@@ -70,13 +88,34 @@ pub struct NormalizedSurfaceMesh<S> where S: BaseNum {
     triangles: Vec<Triangle<S>>
 }
 
-impl<S> ApproxEq for NormalizedSurfaceMesh<S> where S: BaseFloat {
-    type Epsilon = S;
+impl<S> ApproxEq for NormalizedSurfaceMesh<S> where S: BaseFloat + ApproxEq {
+    type Epsilon = S::Epsilon;
 
-    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
+    fn default_epsilon() ->Self::Epsilon {
+        S::default_epsilon()
+    }
+
+    fn default_max_relative() -> Self::Epsilon {
+        S::default_max_relative()
+    }
+
+    fn default_max_ulps() -> u32 {
+        S::default_max_ulps()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: Self::Epsilon, max_relative: Self::Epsilon) -> bool {
         if self.triangles.len() == other.triangles.len() {
             let mut pairs = self.triangles.iter().zip(other.triangles.iter());
-            pairs.all(|(&tri1, &tri2)| tri1.approx_eq_eps(&tri2, epsilon))
+            pairs.all(|(&tri1, &tri2)| tri1.relative_eq(&tri2, epsilon, max_relative))
+        } else {
+            false
+        }
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: Self::Epsilon, max_ulps: u32) -> bool {
+        if self.triangles.len() == other.triangles.len() {
+            let mut pairs = self.triangles.iter().zip(other.triangles.iter());
+            pairs.all(|(&tri1, &tri2)| tri1.ulps_eq(&tri2, epsilon, max_ulps))
         } else {
             false
         }
@@ -420,10 +459,10 @@ mod tests {
 
         // Assert each individual triangle so that it is easier to debug
         assert_eq!(4, normalized.triangles.len());
-        assert_approx_eq!(expected_triangles[0], normalized.triangles[0]);
-        assert_approx_eq!(expected_triangles[1], normalized.triangles[1]);
-        assert_approx_eq!(expected_triangles[2], normalized.triangles[2]);
-        assert_approx_eq!(expected_triangles[3], normalized.triangles[3]);
+        assert_ulps_eq!(expected_triangles[0], normalized.triangles[0]);
+        assert_ulps_eq!(expected_triangles[1], normalized.triangles[1]);
+        assert_ulps_eq!(expected_triangles[2], normalized.triangles[2]);
+        assert_ulps_eq!(expected_triangles[3], normalized.triangles[3]);
     }
 
     // TODO: Need more tests for almost everything here. In particular,

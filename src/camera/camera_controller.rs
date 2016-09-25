@@ -98,7 +98,7 @@ impl CameraController {
 
     fn rotate_camera(&self, angle: f32) -> Camera {
         use cgmath::Rad;
-        let angle = Rad::new(angle);
+        let angle = Rad(angle);
         let mut camera = self.camera.clone();
 
         if self.rotate_right { camera = camera.rotate_axis_angle(camera.up(), -angle); }

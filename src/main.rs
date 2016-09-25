@@ -6,6 +6,9 @@ extern crate time;
 #[macro_use]
 extern crate itertools;
 
+#[macro_use]
+extern crate approx;
+
 mod entity;
 mod engine;
 mod render;

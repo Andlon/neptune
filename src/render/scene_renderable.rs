@@ -45,27 +45,64 @@ impl From<cgmath::Vector3<f32>> for RenderNormal {
     }
 }
 
-use cgmath::ApproxEq;
+use approx::ApproxEq;
 
 impl ApproxEq for RenderVertex {
-    type Epsilon = f32;
+    type Epsilon = <f32 as ApproxEq>::Epsilon;
 
-    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
-        self.pos[0].approx_eq_eps(&other.pos[0], epsilon)
-        && self.pos[1].approx_eq_eps(&other.pos[1], epsilon)
-        && self.pos[2].approx_eq_eps(&other.pos[2], epsilon)
+    fn default_epsilon() -> <f32 as ApproxEq>::Epsilon {
+        f32::default_epsilon()
+    }
+
+    fn default_max_relative() -> <f32 as ApproxEq>::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn default_max_ulps() -> u32 {
+        f32::default_max_ulps()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: <f32 as ApproxEq>::Epsilon, max_relative: <f32 as ApproxEq>::Epsilon) -> bool {
+        self.pos[0].relative_eq(&other.pos[0], epsilon, max_relative)
+        && self.pos[1].relative_eq(&other.pos[1], epsilon, max_relative)
+        && self.pos[2].relative_eq(&other.pos[2], epsilon, max_relative)
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: <f32 as ApproxEq>::Epsilon, max_ulps: u32) -> bool {
+        self.pos[0].ulps_eq(&other.pos[0], epsilon, max_ulps)
+        && self.pos[1].ulps_eq(&other.pos[1], epsilon, max_ulps)
+        && self.pos[2].ulps_eq(&other.pos[2], epsilon, max_ulps)
     }
 }
 
 impl ApproxEq for RenderNormal {
-    type Epsilon = f32;
+    type Epsilon = <f32 as ApproxEq>::Epsilon;
 
-    fn approx_eq_eps(&self, other: &Self, epsilon: &Self::Epsilon) -> bool {
-        self.normal[0].approx_eq_eps(&other.normal[0], epsilon)
-        && self.normal[1].approx_eq_eps(&other.normal[1], epsilon)
-        && self.normal[2].approx_eq_eps(&other.normal[2], epsilon)
+    fn default_epsilon() -> <f32 as ApproxEq>::Epsilon {
+        f32::default_epsilon()
+    }
+
+    fn default_max_relative() -> <f32 as ApproxEq>::Epsilon {
+        f32::default_max_relative()
+    }
+
+    fn default_max_ulps() -> u32 {
+        f32::default_max_ulps()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: <f32 as ApproxEq>::Epsilon, max_relative: <f32 as ApproxEq>::Epsilon) -> bool {
+        self.normal[0].relative_eq(&other.normal[0], epsilon, max_relative)
+        && self.normal[1].relative_eq(&other.normal[1], epsilon, max_relative)
+        && self.normal[2].relative_eq(&other.normal[2], epsilon, max_relative)
+    }
+
+    fn ulps_eq(&self, other: &Self, epsilon: <f32 as ApproxEq>::Epsilon, max_ulps: u32) -> bool {
+        self.normal[0].ulps_eq(&other.normal[0], epsilon, max_ulps)
+        && self.normal[1].ulps_eq(&other.normal[1], epsilon, max_ulps)
+        && self.normal[2].ulps_eq(&other.normal[2], epsilon, max_ulps)
     }
 }
+
 
 implement_vertex!(RenderVertex, pos);
 implement_vertex!(RenderNormal, normal);

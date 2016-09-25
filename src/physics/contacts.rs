@@ -75,9 +75,9 @@ mod tests {
         assert!(contact_data.is_some());
 
         let contact_data = contact_data.unwrap();
-        assert_approx_eq!(Vector3::new(1.0, 0.0, 0.0), contact_data.normal);
-        assert_approx_eq!(Point3::new(0.5, 0.0, 0.0), contact_data.point);
-        assert_approx_eq!(0.5, contact_data.penetration_depth);
+        assert_ulps_eq!(Vector3::new(1.0, 0.0, 0.0), contact_data.normal);
+        assert_ulps_eq!(Point3::new(0.5, 0.0, 0.0), contact_data.point);
+        assert_ulps_eq!(0.5, contact_data.penetration_depth);
     }
 
     #[test]
@@ -91,9 +91,9 @@ mod tests {
         let contact_data = contact_data.unwrap();
         // Neither the normal nor the point of contact is well defined in this situation,
         // but we can check that the point of contact lies somewhere on the unit sphere.
-        assert_approx_eq!(1.0, contact_data.normal.magnitude());
-        assert_approx_eq!(1.0, contact_data.point.distance(Point3::origin()));
-        assert_approx_eq!(2.0, contact_data.penetration_depth);
+        assert_ulps_eq!(1.0, contact_data.normal.magnitude());
+        assert_ulps_eq!(1.0, contact_data.point.distance(Point3::origin()));
+        assert_ulps_eq!(2.0, contact_data.penetration_depth);
     }
 
     #[test]
@@ -127,9 +127,9 @@ mod tests {
         assert!(contact_data.is_some());
 
         let contact_data = contact_data.unwrap();
-        assert_approx_eq!(Point3::new(0.75, 0.0, 0.0), contact_data.point);
-        assert_approx_eq!(Vector3::new(1.0, 0.0, 0.0), contact_data.normal);
-        assert_approx_eq!(0.25, contact_data.penetration_depth);
+        assert_ulps_eq!(Point3::new(0.75, 0.0, 0.0), contact_data.point);
+        assert_ulps_eq!(Vector3::new(1.0, 0.0, 0.0), contact_data.normal);
+        assert_ulps_eq!(0.25, contact_data.penetration_depth);
     }
 
 

@@ -131,9 +131,9 @@ mod tests {
         let expected_normal = RenderNormal::new(0.0, 0.0, 1.0);
 
         assert_eq!(3, normals.len());
-        assert_approx_eq!(expected_normal, normals[0]);
-        assert_approx_eq!(expected_normal, normals[1]);
-        assert_approx_eq!(expected_normal, normals[2]);
+        assert_ulps_eq!(expected_normal, normals[0]);
+        assert_ulps_eq!(expected_normal, normals[1]);
+        assert_ulps_eq!(expected_normal, normals[2]);
     }
 
     #[test]
@@ -157,12 +157,12 @@ mod tests {
         let expected_normal2 = RenderNormal::new(0.0, 1.0, 0.0);
 
         assert_eq!(6, normals.len());
-        assert_approx_eq!(expected_normal1, normals[0]);
-        assert_approx_eq!(expected_normal1, normals[1]);
-        assert_approx_eq!(expected_normal1, normals[2]);
-        assert_approx_eq!(expected_normal2, normals[3]);
-        assert_approx_eq!(expected_normal2, normals[4]);
-        assert_approx_eq!(expected_normal2, normals[5]);
+        assert_ulps_eq!(expected_normal1, normals[0]);
+        assert_ulps_eq!(expected_normal1, normals[1]);
+        assert_ulps_eq!(expected_normal1, normals[2]);
+        assert_ulps_eq!(expected_normal2, normals[3]);
+        assert_ulps_eq!(expected_normal2, normals[4]);
+        assert_ulps_eq!(expected_normal2, normals[5]);
     }
 
     // TODO: Test weighted_vertex_normals when vertices are not repeated

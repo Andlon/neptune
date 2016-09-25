@@ -73,7 +73,7 @@ impl<S> OverlapsWith<Sphere<S>> for Sphere<S> where S: BaseFloat {
 
 mod tests {
     use super::{Sphere, OverlapsWith, Cuboid};
-    use cgmath::{Vector3, Point3, ApproxEq, Rad, Quaternion, EuclideanSpace, Rotation3, Euler};
+    use cgmath::{Vector3, Point3, ApproxEq, Rad, Quaternion, EuclideanSpace, Rotation3, Euler, Zero};
 
     #[test]
     fn sphere_overlaps_with_sphere() {
@@ -110,35 +110,35 @@ mod tests {
     fn cuboid_closest_interior_point_for_axis_aligned_cuboid() {
         let halfSize = Vector3::new(0.5, 0.5, 0.5);
         let center = Point3::origin();
-        let rotation = Quaternion::from_axis_angle(Vector3::unit_x(), Rad::new(0.0));
+        let rotation = Quaternion::from_axis_angle(Vector3::unit_x(), Rad::zero());
         let cuboid = Cuboid { center: center, halfSize: halfSize, rotation: rotation };
 
         {
             // Test with a point located exactly at the origin
             let point = Point3::origin();
             let expected = point;
-            assert_approx_eq!(Point3::origin(), cuboid.closest_interior_point(point));
+            assert_ulps_eq!(Point3::origin(), cuboid.closest_interior_point(point));
         }
 
         {
             // Test with an arbitrary interior point
             let point = Point3::new(0.2, 0.1, -0.3);
             let expected = point;
-            assert_approx_eq!(expected, cuboid.closest_interior_point(point));
+            assert_ulps_eq!(expected, cuboid.closest_interior_point(point));
         }
 
         {
             // Test with a point located exactly at a corner vertex
             let point = Point3::new(0.5, 0.5, 0.5);
             let expected = point;
-            assert_approx_eq!(expected, cuboid.closest_interior_point(point));
+            assert_ulps_eq!(expected, cuboid.closest_interior_point(point));
         }
 
         {
             // Test with a point located outside the cuboid
             let point = Point3::new(1.0, 0.0, 0.0);
             let expected = Point3::new(0.5, 0.0, 0.0);
-            assert_approx_eq!(expected, cuboid.closest_interior_point(point));
+            assert_ulps_eq!(expected, cuboid.closest_interior_point(point));
         }
     }
 
