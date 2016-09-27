@@ -299,10 +299,9 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
 
     {
         // Add a big box for testing
-        let box_mass = 1.0;
+        let box_mass = 0.2;
         let box_inertia_tensor = box_mass * Matrix3::from_diagonal(Vector3::new(500.0, 500.0, 200.0)) / 12.0;
         let box_position = Point3::new(0.0, -40.0, 0.0);
-
         let box_entity = entity_manager.create();
         let box_renderable = SceneRenderable { color: green, .. box_renderable(&window, 5.0, 5.0, 10.0) };
         let box_collision_model = CollisionModel::cuboid(Vector3::new(5.0, 5.0, 10.0), Quaternion::new(1.0, 0.0, 0.0, 0.0));
@@ -310,13 +309,12 @@ fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores:
         stores.physics.set_component_properties(box_entity,
             PhysicsComponent {
                 position: box_position,
-                mass: 0.5,
-                //angular_velocity: 2.0 * Vector3::new(1.0, 1.0, 1.0).normalize(),
+                mass: box_mass,
                 inertia_body: box_inertia_tensor,
                 .. PhysicsComponent::default()
             });
         stores.collision.set_component_model(box_entity, box_collision_model);
     }
 
-    Camera::look_in(Point3::new(25.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()
+    Camera::look_in(Point3::new(40.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()
 }
