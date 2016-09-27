@@ -197,8 +197,8 @@ fn resolve_interpenetrations(
         // Move the two objects linearly away from each other along the contact normal.
         // The distance to move is determined by the relative masses of the two objects,
         // and the penetration depth.
-        let obj1_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
-        let obj2_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
+        let obj1_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
+        let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
 
         // TODO: Implement -= for cgmath Point3?
         view.position[physics1] += - obj1_move_dist * contact.data.normal;
