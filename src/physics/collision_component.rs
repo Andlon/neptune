@@ -1,5 +1,4 @@
-use cgmath::{Point3, Vector3, Quaternion};
-use geometry::*;
+use cgmath::{Vector3, Quaternion};
 use entity::Entity;
 use std::collections::HashMap;
 
@@ -12,7 +11,7 @@ pub struct SphereCollisionModel {
 
 #[derive(Copy, Clone, Debug)]
 pub struct CuboidCollisionModel {
-    pub halfSize: Vector3<f64>,
+    pub half_size: Vector3<f64>,
 
     /// Rotation in the model coordinate frame, before world rotation is applied
     pub rotation: Quaternion<f64>
@@ -30,8 +29,8 @@ impl CollisionModel {
         CollisionModel::Sphere(SphereCollisionModel { radius: radius })
     }
 
-    pub fn cuboid(halfSize: Vector3<f64>, rotation: Quaternion<f64>) -> Self {
-        CollisionModel::Cuboid(CuboidCollisionModel { halfSize: halfSize, rotation: rotation })
+    pub fn cuboid(half_size: Vector3<f64>, rotation: Quaternion<f64>) -> Self {
+        CollisionModel::Cuboid(CuboidCollisionModel { half_size: half_size, rotation: rotation })
     }
 }
 

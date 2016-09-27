@@ -8,7 +8,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn finish(mut self) {
+    pub fn finish(self) {
         // For now ignore any kind of error handling.
         self.internal_frame.finish().unwrap();
     }
@@ -23,7 +23,7 @@ pub struct Window {
 impl Window {
     pub fn new() -> Self {
         // Note: May have to implement the builder pattern in the future.
-        use glium::{DisplayBuild, Surface};
+        use glium::{DisplayBuild};
         Window {
             display: glium::glutin::WindowBuilder::new()
                         .with_depth_buffer(24)

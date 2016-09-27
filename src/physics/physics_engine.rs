@@ -1,6 +1,5 @@
 use physics::PhysicsComponentStore;
-use cgmath::{Point3, Vector3, InnerSpace, Zero, Matrix3, Quaternion, Basis3, Matrix};
-use itertools;
+use cgmath::{Point3, Vector3, InnerSpace, Zero, Matrix3, Quaternion, Matrix};
 
 pub struct PhysicsEngine {
 
@@ -110,9 +109,9 @@ impl PhysicsEngine {
                 let x_j = position[j];
                 let r = x_j - x_i;
                 let r2 = r.magnitude2();
-                let F = G * m_i * m_j / r2;
-                acceleration[i] += (F / m_i) * r;
-                acceleration[j] += - (F / m_j) * r;
+                let f = G * m_i * m_j / r2;
+                acceleration[i] += (f / m_i) * r;
+                acceleration[j] += - (f / m_j) * r;
             }
         }
     }

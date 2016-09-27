@@ -1,5 +1,3 @@
-use entity::Entity;
-use cgmath::{Vector3, Point3};
 use physics::Contact;
 
 pub struct ContactCollection {

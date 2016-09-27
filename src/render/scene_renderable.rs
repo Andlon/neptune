@@ -18,6 +18,7 @@ pub struct RenderNormal {
 }
 
 impl RenderVertex {
+    #[allow(dead_code)]
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         RenderVertex {
             pos: [x, y, z]
@@ -32,6 +33,7 @@ impl From<cgmath::Point3<f32>> for RenderVertex {
 }
 
 impl RenderNormal {
+    #[allow(dead_code)]
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         RenderNormal {
             normal: [x, y, z]

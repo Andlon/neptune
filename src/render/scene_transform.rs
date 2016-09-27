@@ -1,6 +1,5 @@
 use store::OneToOneStore;
 use entity::Entity;
-use std::collections::HashMap;
 
 use cgmath::{Point3, Vector3, Matrix4, EuclideanSpace, Quaternion};
 
@@ -49,13 +48,5 @@ impl SceneTransformStore {
 
     pub fn lookup(&self, entity: &Entity) -> Option<&SceneTransform> {
         self.store.lookup(entity)
-    }
-
-    pub fn transforms(&self) -> &HashMap<Entity, SceneTransform> {
-        &self.store.components
-    }
-
-    pub fn transforms_mut(&mut self) -> &mut HashMap<Entity, SceneTransform> {
-        &mut self.store.components
     }
 }

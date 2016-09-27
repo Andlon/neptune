@@ -3,9 +3,6 @@ use glium;
 use cgmath::*;
 use camera::Camera;
 use render::*;
-use physics::{Contact, ContactCollection};
-use entity::Entity;
-use std::collections::HashSet;
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     // TODO: Move this into Camera, so that we can
@@ -163,14 +160,4 @@ impl SceneRenderer {
             }
         }
     }
-}
-
-fn determine_entities_in_contact(contacts: &ContactCollection) -> HashSet<Entity> {
-    let mut set = HashSet::new();
-    for contact in contacts.contacts() {
-        let (entity1, entity2) = contact.objects;
-        set.insert(entity1);
-        set.insert(entity2);
-    }
-    set
 }

@@ -1,8 +1,6 @@
 use physics::*;
-use geometry::{OverlapsWith, Sphere, Cuboid};
-use message::Message;
-use entity::Entity;
-use cgmath::{InnerSpace, MetricSpace, Matrix3, Quaternion, Matrix, SquareMatrix};
+use geometry::{Sphere, Cuboid};
+use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix};
 
 pub struct CollisionEngine;
 
@@ -61,7 +59,7 @@ impl CollisionEngine {
                             })
                     },
                     // Cuboid-cuboid
-                    (Model::Cuboid(cuboid1), Model::Cuboid(cuboid2))
+                    (Model::Cuboid(_), Model::Cuboid(_))
                     => {
                         // TODO: Implement Cuboid-cuboid collisions
                         None
@@ -70,7 +68,9 @@ impl CollisionEngine {
                     (Model::Sphere(sphere_model), Model::Cuboid(cuboid_model))
                     => {
                         let sphere = Sphere { radius: sphere_model.radius, center: pos_i };
-                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: orient_j * cuboid_model.rotation, center: pos_j };
+                        let cuboid = Cuboid { half_size: cuboid_model.half_size, rotation: orient_j * cuboid_model.rotation, center: pos_j };
+
+                        // TODO: Fix this. This may be ordering the objects in the wrong way! (I.e. we expect normal to point from i to j etc.)
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_i, entity_j),
@@ -80,8 +80,9 @@ impl CollisionEngine {
                     }
                     (Model::Cuboid(cuboid_model), Model::Sphere(sphere_model))
                     => {
-                        let cuboid = Cuboid { halfSize: cuboid_model.halfSize, rotation: orient_i * cuboid_model.rotation, center: pos_i };
+                        let cuboid = Cuboid { half_size: cuboid_model.half_size, rotation: orient_i * cuboid_model.rotation, center: pos_i };
                         let sphere = Sphere { radius: sphere_model.radius, center: pos_j };
+                        // TODO: Fix this. This may be ordering the objects in the wrong way! (I.e. we expect normal to point from i to j etc.)
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_i, entity_j),
@@ -188,8 +189,6 @@ fn resolve_interpenetrations(
     let mut view = physics_store.mutable_view();
     for contact in contacts.contacts() {
         let (physics1, physics2) = contact.physics_components;
-        let p1 = view.position[physics1];
-        let p2 = view.position[physics2];
         let m1 = view.mass[physics1];
         let m2 = view.mass[physics2];
         let total_mass = m1 + m2;

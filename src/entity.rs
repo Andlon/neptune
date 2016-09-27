@@ -19,10 +19,12 @@ impl EntityManager {
         entity
     }
 
+    #[allow(dead_code)]
     pub fn alive(&self, entity: &Entity) -> bool {
         self.entities.contains(entity)
     }
 
+    #[allow(dead_code)]
     pub fn destroy(&mut self, entity: &Entity) -> bool {
         self.entities.remove(&entity)
     }

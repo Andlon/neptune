@@ -52,10 +52,11 @@ pub fn contact_sphere_cuboid(sphere: Sphere<f64>, cuboid: Cuboid<f64>) -> Option
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use geometry::{Sphere, Cuboid};
-    use cgmath::{Point3, Vector3, EuclideanSpace, InnerSpace, MetricSpace, ApproxEq, Quaternion};
+    use cgmath::{Point3, Vector3, EuclideanSpace, InnerSpace, MetricSpace, Quaternion};
 
     #[test]
     pub fn contact_sphere_sphere_no_collision() {
@@ -104,7 +105,7 @@ mod tests {
         };
         let cuboid = Cuboid {
             center: Point3::new(5.0, 0.0, 0.0),
-            halfSize: Vector3::new(0.5, 0.5, 0.5),
+            half_size: Vector3::new(0.5, 0.5, 0.5),
             rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
         };
 
@@ -120,7 +121,7 @@ mod tests {
         };
         let cuboid = Cuboid {
             center: Point3::new(1.25, 0.0, 0.0),
-            halfSize: Vector3::new(0.5, 0.5, 0.5),
+            half_size: Vector3::new(0.5, 0.5, 0.5),
             rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
         };
         let contact_data = contact_sphere_cuboid(sphere, cuboid);

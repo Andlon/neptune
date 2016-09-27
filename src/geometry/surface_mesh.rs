@@ -51,6 +51,7 @@ impl<S> ApproxEq for Triangle<S> where S: BaseFloat + ApproxEq {
 }
 
 impl<S> Triangle<S> where S: BaseNum {
+    #[allow(dead_code)]
     pub fn new(a: Point3<S>, b: Point3<S>, c: Point3<S>) -> Triangle<S> {
         Triangle { a: a, b: b, c: c }
     }
@@ -231,7 +232,7 @@ impl<'a, S> SurfaceMesh<S> where S: BaseNum {
     pub fn subdivide(&self, times: u32) -> Self {
         let mut mesh = self.clone();
 
-        for k in 0 .. times {
+        for _ in 0 .. times {
             mesh = mesh.subdivide_once();
         }
 
@@ -308,7 +309,6 @@ fn sort_tuple<T>((a, b): (T, T)) -> (T, T) where T: Ord {
 mod tests {
     use super::{SurfaceMesh, TriangleIndices, NormalizedSurfaceMesh, Triangle};
     use cgmath::Point3;
-    use cgmath::ApproxEq;
 
     #[test]
     fn normalized_empty_mesh() {

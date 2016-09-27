@@ -1,9 +1,7 @@
 use cgmath::{Point3, Vector3, Zero, Matrix3, Quaternion, EuclideanSpace, SquareMatrix};
-use store::{Identifier, OneToOneStore};
 use std::collections::HashMap;
 use std::collections::hash_map::Iter;
 use entity::Entity;
-use itertools::Zip;
 
 pub type PhysicsComponentId = usize;
 
@@ -181,6 +179,7 @@ impl PhysicsComponentStore {
         swap(&mut self.orientation, &mut self.prev_orientation);
     }
 
+    #[allow(dead_code)]
     pub fn view<'a>(&'a self) -> PhysicsComponentsView<'a> {
         PhysicsComponentsView {
             position: &self.position,

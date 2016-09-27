@@ -9,7 +9,7 @@ pub struct Sphere<S> where S: BaseNum {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Cuboid<S> where S: BaseNum {
     pub center: Point3<S>,
-    pub halfSize: Vector3<S>,
+    pub half_size: Vector3<S>,
     pub rotation: Quaternion<S>
 }
 
@@ -23,10 +23,10 @@ impl<S> Cuboid<S> where S: BaseFloat {
         // into considering the distance along each axis of the coordinate system
         let x = {
             let dist_along_axis = local_point.x;
-            if dist_along_axis > self.halfSize.x {
-                self.halfSize.x
-            } else if dist_along_axis < -self.halfSize.x {
-                -self.halfSize.x
+            if dist_along_axis > self.half_size.x {
+                self.half_size.x
+            } else if dist_along_axis < -self.half_size.x {
+                -self.half_size.x
             } else {
                 dist_along_axis
             }
@@ -34,10 +34,10 @@ impl<S> Cuboid<S> where S: BaseFloat {
 
         let y = {
             let dist_along_axis = local_point.y;
-            if dist_along_axis > self.halfSize.y {
-                self.halfSize.y
-            } else if dist_along_axis < -self.halfSize.y {
-                -self.halfSize.y
+            if dist_along_axis > self.half_size.y {
+                self.half_size.y
+            } else if dist_along_axis < -self.half_size.y {
+                -self.half_size.y
             } else {
                 dist_along_axis
             }
@@ -45,10 +45,10 @@ impl<S> Cuboid<S> where S: BaseFloat {
 
         let z = {
             let dist_along_axis = local_point.z;
-            if dist_along_axis > self.halfSize.z {
-                self.halfSize.z
-            } else if dist_along_axis < -self.halfSize.z {
-                -self.halfSize.z
+            if dist_along_axis > self.half_size.z {
+                self.half_size.z
+            } else if dist_along_axis < -self.half_size.z {
+                -self.half_size.z
             } else {
                 dist_along_axis
             }
@@ -71,9 +71,10 @@ impl<S> OverlapsWith<Sphere<S>> for Sphere<S> where S: BaseFloat {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::{Sphere, OverlapsWith, Cuboid};
-    use cgmath::{Vector3, Point3, ApproxEq, Rad, Quaternion, EuclideanSpace, Rotation3, Euler, Zero};
+    use cgmath::{Vector3, Point3, Rad, Quaternion, EuclideanSpace, Rotation3, Zero};
 
     #[test]
     fn sphere_overlaps_with_sphere() {
@@ -108,15 +109,14 @@ mod tests {
 
     #[test]
     fn cuboid_closest_interior_point_for_axis_aligned_cuboid() {
-        let halfSize = Vector3::new(0.5, 0.5, 0.5);
+        let half_size = Vector3::new(0.5, 0.5, 0.5);
         let center = Point3::origin();
         let rotation = Quaternion::from_axis_angle(Vector3::unit_x(), Rad::zero());
-        let cuboid = Cuboid { center: center, halfSize: halfSize, rotation: rotation };
+        let cuboid = Cuboid { center: center, half_size: half_size, rotation: rotation };
 
         {
             // Test with a point located exactly at the origin
             let point = Point3::origin();
-            let expected = point;
             assert_ulps_eq!(Point3::origin(), cuboid.closest_interior_point(point));
         }
 

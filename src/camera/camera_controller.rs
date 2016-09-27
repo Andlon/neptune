@@ -61,6 +61,7 @@ impl From<Camera> for CameraController {
 }
 
 impl CameraController {
+    #[allow(dead_code)]
     pub fn camera(&self) -> Camera {
         self.camera
     }

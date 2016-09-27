@@ -39,14 +39,17 @@ impl TimeKeeper {
         }
     }
 
+    #[allow(dead_code)]
     pub fn accumulated(&self) -> f64 {
         self.accumulated
     }
 
+    #[allow(dead_code)]
     pub fn consumed(&self) -> f64 {
         self.consumed
     }
 
+    #[allow(dead_code)]
     pub fn produced(&self) -> f64 {
         self.produced
     }

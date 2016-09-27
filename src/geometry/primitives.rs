@@ -1,22 +1,5 @@
 use geometry::{SurfaceMesh, TriangleIndices};
 use cgmath::*;
-use std;
-
-pub fn tetrahedron<S>(a: Point3<S>, b: Point3<S>, c: Point3<S>, d: Point3<S>) -> SurfaceMesh<S>
-    where S: BaseNum
-{
-    let vertices = vec![a, b, c, d];
-    let (a, b, c, d) = (0, 1, 2, 3);
-    let indices = vec![
-        TriangleIndices::new(c, b, a),
-        TriangleIndices::new(a, b, d),
-        TriangleIndices::new(a, d, c),
-        TriangleIndices::new(b, c, d)
-    ];
-
-    SurfaceMesh::from_indices(vertices, indices)
-        .expect("Triangle indices should all be valid.")
-}
 
 pub fn icosahedron() -> SurfaceMesh<f32> {
     // Let phi be the golden ratio

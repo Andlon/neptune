@@ -1,4 +1,3 @@
-use cgmath::{Point3};
 use glium;
 
 #[derive(Copy, Clone, Debug)]

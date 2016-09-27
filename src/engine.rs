@@ -1,7 +1,6 @@
-use entity::{Entity, EntityManager};
+use entity::{EntityManager};
 use render::*;
 use physics::*;
-use geometry::Sphere;
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -88,14 +87,13 @@ impl Engine {
 
 impl MessageReceiver for Engine {
     fn process_messages(&mut self, messages: &[Message]) -> Vec<Message> {
-        let mut response = Vec::new();
         for message in messages {
             match message.clone() {
                 Message::WindowClosed => self.should_continue = false,
                 _ => ()
             };
         }
-        response
+        Vec::new()
     }
 }
 
@@ -123,7 +121,7 @@ fn prepare_systems(window: &Window) -> Systems {
 fn interpolate_transforms(transforms: &mut SceneTransformStore,
                           physics: &PhysicsComponentStore,
                           fraction: f64) {
-    use cgmath::{Point3, EuclideanSpace, Vector4, Quaternion};
+    use cgmath::{Point3, EuclideanSpace, Quaternion};
     assert!(fraction >= 0.0 && fraction <= 1.0);
 
     for (&entity, &component) in physics.entity_component_pairs() {
@@ -167,9 +165,8 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 
 fn initialize_scene(window: &Window, entity_manager: &mut EntityManager, stores: &mut ComponentStores)
     -> Camera {
-    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, InnerSpace, Zero};
+    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, Zero};
 
-    use std::f64;
     use std::f32;
 
     let blue = Color::rgb(0.0, 0.0, 1.0);

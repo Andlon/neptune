@@ -1,4 +1,3 @@
-use glium::backend::Facade;
 use glium;
 use render::*;
 use cgmath::*;
@@ -64,16 +63,7 @@ pub fn build_renderable(window: &Window,
     }
 }
 
-pub fn tetrahedron_renderable(window: &Window,
-    a: Point3<f32>, b: Point3<f32>, c: Point3<f32>, d: Point3<f32>)
-     -> SceneRenderable {
-
-    let mesh = tetrahedron(a, b, c, d).replicate_vertices();
-    let normals = weighted_vertex_normals(&mesh);
-
-    build_renderable(window, &mesh, &normals)
-}
-
+#[allow(dead_code)]
 pub fn icosahedron_renderable(window: &Window) -> SceneRenderable {
     use geometry::icosahedron;
     let mesh = icosahedron().replicate_vertices();
@@ -103,11 +93,10 @@ pub fn box_renderable(window: &Window, halfx: f32, halfy: f32, halfz: f32)
 
 #[cfg(test)]
 mod tests {
-
     use super::weighted_vertex_normals;
     use geometry::{SurfaceMesh, TriangleIndices};
-    use cgmath::{Point3, Vector3, ApproxEq};
-    use render::{RenderVertex, RenderNormal};
+    use cgmath::{Point3};
+    use render::{RenderNormal};
 
     #[test]
     fn weighted_vertex_normals_on_empty_mesh() {
