@@ -192,11 +192,7 @@ mod tests {
         assert_ulps_eq!(expected_right, camera.right());
     }
 
-    // TODO: Fix this test. It seems to break because the approx macros
-    // don't seem to compare well near zero...? Or perhaps in particular when
-    // something is negative but close to zero?
     #[test]
-    #[ignore]
     fn test_camera_view_matrix_undoes_translation() {
         let translation = Vector3::new(2.0, -3.0, 5.0);
         let camera = Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z())
@@ -207,7 +203,7 @@ mod tests {
         let trans4 = translation.extend(1.0);
         let expected = Vector4::new(0.0, 0.0, 0.0, 1.0f32);
 
-        assert_ulps_eq!(expected, view * trans4, max_ulps=15);
+        assert_relative_eq!(expected, view * trans4, epsilon=1e-6);
     }
 
     // TODO: Write more tests for view matrix
