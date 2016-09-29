@@ -60,52 +60,10 @@ impl<S> Cuboid<S> where S: BaseFloat {
     }
 }
 
-pub trait OverlapsWith<Shape> {
-    fn overlaps_with(&self, shape: &Shape) -> bool;
-}
-
-impl<S> OverlapsWith<Sphere<S>> for Sphere<S> where S: BaseFloat {
-    fn overlaps_with(&self, other: &Sphere<S>) -> bool {
-        let r = other.center - self.center;
-        r.magnitude2() <= (self.radius + other.radius).powi(2)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{Sphere, OverlapsWith, Cuboid};
+    use super::{Cuboid};
     use cgmath::{Vector3, Point3, Rad, Quaternion, EuclideanSpace, Rotation3, Zero};
-
-    #[test]
-    fn sphere_overlaps_with_sphere() {
-        {
-            let a = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
-            let b = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 3.0) };
-            assert_eq!(false, a.overlaps_with(&b));
-            assert_eq!(false, b.overlaps_with(&a));
-        }
-
-        {
-            let a = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
-            let b = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 2.0) };
-            assert_eq!(true, a.overlaps_with(&b));
-            assert_eq!(true, b.overlaps_with(&a));
-        }
-
-        {
-            let a = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
-            let b = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
-            assert_eq!(true, a.overlaps_with(&b));
-            assert_eq!(true, b.overlaps_with(&a));
-        }
-
-        {
-            let a = Sphere { radius: 1.0, center: Point3::new(0.0, 0.0, 0.0) };
-            let b = Sphere { radius: 1.5, center: Point3::new(0.0, 0.0, 2.0) };
-            assert_eq!(true, a.overlaps_with(&b));
-            assert_eq!(true, b.overlaps_with(&a));
-        }
-    }
 
     #[test]
     fn cuboid_closest_interior_point_for_axis_aligned_cuboid() {
