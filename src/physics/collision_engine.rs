@@ -1,6 +1,6 @@
 use physics::*;
 use geometry::{Sphere, Cuboid};
-use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix};
+use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix, EuclideanSpace};
 
 pub struct CollisionEngine;
 
@@ -65,12 +65,10 @@ impl CollisionEngine {
                         None
                     },
                     // Cuboid-sphere
-                    (Model::Sphere(sphere_model), Model::Cuboid(cuboid_model))
+                    (Model::Sphere(sphere), Model::Cuboid(cuboid))
                     => {
-                        let sphere = Sphere { radius: sphere_model.radius, center: pos_i };
-                        let cuboid = Cuboid { half_size: cuboid_model.half_size, rotation: orient_j * cuboid_model.rotation, center: pos_j };
-
-                        // TODO: Fix this. This may be ordering the objects in the wrong way! (I.e. we expect normal to point from i to j etc.)
+                        let sphere = Sphere { radius: sphere.radius, center: pos_i + sphere.center.to_vec() };
+                        let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_j * cuboid.rotation, center: pos_j + cuboid.center.to_vec() };
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_i, entity_j),
@@ -78,15 +76,14 @@ impl CollisionEngine {
                                 data: data
                             })
                     }
-                    (Model::Cuboid(cuboid_model), Model::Sphere(sphere_model))
+                    (Model::Cuboid(cuboid), Model::Sphere(sphere))
                     => {
-                        let cuboid = Cuboid { half_size: cuboid_model.half_size, rotation: orient_i * cuboid_model.rotation, center: pos_i };
-                        let sphere = Sphere { radius: sphere_model.radius, center: pos_j };
-                        // TODO: Fix this. This may be ordering the objects in the wrong way! (I.e. we expect normal to point from i to j etc.)
+                        let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_i * cuboid.rotation, center: pos_i + cuboid.center.to_vec() };
+                        let sphere = Sphere { radius: sphere.radius, center: pos_j + sphere.center.to_vec() };
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
-                                objects: (entity_i, entity_j),
-                                physics_components: (phys_id_i, phys_id_j),
+                                objects: (entity_j, entity_i),
+                                physics_components: (phys_id_j, phys_id_i),
                                 data: data
                             })
                     }
