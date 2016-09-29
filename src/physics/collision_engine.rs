@@ -54,7 +54,6 @@ impl CollisionEngine {
                         contact_sphere_sphere(sphere_i, sphere_j)
                             .map(|data| Contact { 
                                 objects: (entity_i, entity_j),
-                                physics_components: (phys_id_i, phys_id_j),
                                 data: data
                             })
                     },
@@ -72,10 +71,9 @@ impl CollisionEngine {
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_i, entity_j),
-                                physics_components: (phys_id_i, phys_id_j),
                                 data: data
                             })
-                    }
+                    },
                     (Model::Cuboid(cuboid), Model::Sphere(sphere))
                     => {
                         let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_i * cuboid.rotation, center: pos_i + cuboid.center.to_vec() };
@@ -83,7 +81,6 @@ impl CollisionEngine {
                         contact_sphere_cuboid(sphere, cuboid)
                             .map(|data| Contact {
                                 objects: (entity_j, entity_i),
-                                physics_components: (phys_id_j, phys_id_i),
                                 data: data
                             })
                     }
@@ -109,7 +106,6 @@ fn resolve_velocities(
     physics_store: &mut PhysicsComponentStore,
     contacts: &ContactCollection)
 {
-    let mut view = physics_store.mutable_view();
     for contact in contacts.contacts() {
         // TODO: Move restituion into contact
         let restitution = 1.0;
@@ -125,56 +121,62 @@ fn resolve_velocities(
         // The mathematics here are based on the following Wikipedia article:
         // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
 
-        let (physics1, physics2) = contact.physics_components;
-        let orientation1 = view.orientation[physics1];
-        let orientation2 = view.orientation[physics2];
-        let v1 = view.velocity[physics1];
-        let v2 = view.velocity[physics2];
-        let m1 = view.mass[physics1];
-        let m2 = view.mass[physics2];
-        let r1 = contact.data.point - view.position[physics1];
-        let r2 = contact.data.point - view.position[physics2];
-        let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
-        let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
-        let w1 = i_inv1 * view.angular_momentum[physics1];
-        let w2 = i_inv2 * view.angular_momentum[physics2];
-        let v_p1 = v1 + w1.cross(r1);
-        let v_p2 = v2 + w1.cross(r2);
+        let (entity1, entity2) = contact.objects;
+        let physics1 = physics_store.lookup_component(&entity1);
+        let physics2 = physics_store.lookup_component(&entity2);
 
-        // Let n denote the contact normal
-        let n = contact.data.normal;
+       if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
+            let mut view = physics_store.mutable_view();
+            let orientation1 = view.orientation[physics1];
+            let orientation2 = view.orientation[physics2];
+            let v1 = view.velocity[physics1];
+            let v2 = view.velocity[physics2];
+            let m1 = view.mass[physics1];
+            let m2 = view.mass[physics2];
+            let r1 = contact.data.point - view.position[physics1];
+            let r2 = contact.data.point - view.position[physics2];
+            let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
+            let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
+            let w1 = i_inv1 * view.angular_momentum[physics1];
+            let w2 = i_inv2 * view.angular_momentum[physics2];
+            let v_p1 = v1 + w1.cross(r1);
+            let v_p2 = v2 + w1.cross(r2);
 
-        // Define the "relative velocity" at the point of impact
-        let v_r = v_p2 - v_p1;
+            // Let n denote the contact normal
+            let n = contact.data.normal;
 
-        // The separating velocity is the projection of the relative velocity
-        // onto the contact normal.
-        let v_separating = v_r.dot(n);
+            // Define the "relative velocity" at the point of impact
+            let v_r = v_p2 - v_p1;
 
-        // If v_separating is non-negative, the objects are not moving
-        // towards each other, and we do not need to add any corrective impulse.
-        if v_separating < 0.0 {
-            // j_r denotes the relative (reaction) impulse
-            let j_r = {
-                let linear_denominator = 1.0 / m1 + 1.0 / m2;
-                let angular_denominator1 = i_inv1 * r1.cross(n).cross(r1);
-                let angular_denominator2 = i_inv2 * r2.cross(n).cross(r2);
-                let angular_denominator = (angular_denominator1 + angular_denominator2).dot(n);
-                let numerator = -(1.0 + restitution) * v_separating;
-                numerator / (linear_denominator + angular_denominator)
-            };
+            // The separating velocity is the projection of the relative velocity
+            // onto the contact normal.
+            let v_separating = v_r.dot(n);
 
-            // Compute post-collision velocities
-            let v1_post = v1 - j_r / m1 * n;
-            let v2_post = v2 + j_r / m2 * n;
-            let w1_post = w1 - j_r * i_inv1 * r1.cross(n);
-            let w2_post = w2 + j_r * i_inv2 * r2.cross(n);
-            view.velocity[physics1] = v1_post;
-            view.velocity[physics2] = v2_post;
+            // If v_separating is non-negative, the objects are not moving
+            // towards each other, and we do not need to add any corrective impulse.
+            if v_separating < 0.0 {
+                // j_r denotes the relative (reaction) impulse
+                let j_r = {
+                    let linear_denominator = 1.0 / m1 + 1.0 / m2;
+                    let angular_denominator1 = i_inv1 * r1.cross(n).cross(r1);
+                    let angular_denominator2 = i_inv2 * r2.cross(n).cross(r2);
+                    let angular_denominator = (angular_denominator1 + angular_denominator2).dot(n);
+                    let numerator = -(1.0 + restitution) * v_separating;
+                    numerator / (linear_denominator + angular_denominator)
+                };
 
-            // TODO: Avoid the inversions here
-            view.angular_momentum[physics1] = i_inv1.invert().unwrap() * w1_post;
-            view.angular_momentum[physics2] = i_inv2.invert().unwrap() * w2_post;
+                // Compute post-collision velocities
+                let v1_post = v1 - j_r / m1 * n;
+                let v2_post = v2 + j_r / m2 * n;
+                let w1_post = w1 - j_r * i_inv1 * r1.cross(n);
+                let w2_post = w2 + j_r * i_inv2 * r2.cross(n);
+                view.velocity[physics1] = v1_post;
+                view.velocity[physics2] = v2_post;
+
+                // TODO: Avoid the inversions here
+                view.angular_momentum[physics1] = i_inv1.invert().unwrap() * w1_post;
+                view.angular_momentum[physics2] = i_inv2.invert().unwrap() * w2_post;
+            }
         }
     }
 }
@@ -183,21 +185,25 @@ fn resolve_interpenetrations(
     physics_store: &mut PhysicsComponentStore,
     contacts: &ContactCollection)
 {
-    let mut view = physics_store.mutable_view();
     for contact in contacts.contacts() {
-        let (physics1, physics2) = contact.physics_components;
-        let m1 = view.mass[physics1];
-        let m2 = view.mass[physics2];
-        let total_mass = m1 + m2;
+        let (entity1, entity2) = contact.objects;
+        let physics1 = physics_store.lookup_component(&entity1);
+        let physics2 = physics_store.lookup_component(&entity2);
+        if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
+            let mut view = physics_store.mutable_view();
+            let m1 = view.mass[physics1];
+            let m2 = view.mass[physics2];
+            let total_mass = m1 + m2;
 
-        // Move the two objects linearly away from each other along the contact normal.
-        // The distance to move is determined by the relative masses of the two objects,
-        // and the penetration depth.
-        let obj1_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
-        let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
+            // Move the two objects linearly away from each other along the contact normal.
+            // The distance to move is determined by the relative masses of the two objects,
+            // and the penetration depth.
+            let obj1_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
+            let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
 
-        // TODO: Implement -= for cgmath Point3?
-        view.position[physics1] += - obj1_move_dist * contact.data.normal;
-        view.position[physics2] += obj2_move_dist * contact.data.normal;
+            // TODO: Implement -= for cgmath Point3?
+            view.position[physics1] += - obj1_move_dist * contact.data.normal;
+            view.position[physics2] += obj2_move_dist * contact.data.normal;
+        }
     }
 }

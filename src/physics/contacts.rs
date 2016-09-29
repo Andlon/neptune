@@ -1,7 +1,6 @@
 use cgmath::*;
 use entity::Entity;
 use geometry::{Sphere, Cuboid};
-use physics::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct ContactData {
@@ -13,7 +12,6 @@ pub struct ContactData {
 #[derive(Copy, Clone, Debug)]
 pub struct Contact {
     pub objects: (Entity, Entity),
-    pub physics_components: (PhysicsComponentId, PhysicsComponentId),
     pub data: ContactData
 }
 
