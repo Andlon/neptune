@@ -3,6 +3,9 @@ use glium;
 use cgmath::*;
 use camera::Camera;
 use render::*;
+use std::collections::HashMap;
+use entity::Entity;
+use cgmath;
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     // TODO: Move this into Camera, so that we can
@@ -24,8 +27,28 @@ fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     ]
 }
 
+#[derive(Copy, Clone, Debug)]
+struct RenderVertex {
+    pub pos: [f32; 3]
+}
+
+#[derive(Copy, Clone, Debug)]
+struct RenderNormal {
+    pub normal: [f32; 3]
+}
+
+implement_vertex!(RenderVertex, pos);
+implement_vertex!(RenderNormal, normal);
+
+struct ComponentBufferData {
+    pub vertices: glium::VertexBuffer<RenderVertex>,
+    pub normals: glium::VertexBuffer<RenderNormal>,
+    pub indices: glium::IndexBuffer<u32>
+}
+
 pub struct SceneRenderer {
     program: glium::Program,
+    buffer_cache: HashMap<Entity, ComponentBufferData>
 }
 
 impl SceneRenderer {
@@ -106,7 +129,8 @@ impl SceneRenderer {
             None).unwrap();
 
         SceneRenderer {
-            program: program
+            program: program,
+            buffer_cache: HashMap::new()
         }
     }
 
@@ -149,15 +173,79 @@ impl SceneRenderer {
                     diffuse_color: renderable.color
                 };
 
+                let component_data = self.buffer_cache.get(entity)
+                                                      .expect("Buffers should have been updated before rendering!");
+
                 surface.draw(
-                    (&renderable.vertices as &VertexBuffer<RenderVertex>,
-                        &renderable.normals as &VertexBuffer<RenderNormal>),
-                    &renderable.indices as &IndexBuffer<u32>,
+                    (&component_data.vertices as &VertexBuffer<RenderVertex>,
+                     &component_data.normals as &VertexBuffer<RenderNormal>),
+                    &component_data.indices as &IndexBuffer<u32>,
                     &self.program,
                     &uniforms,
                     &params
                 ).unwrap();
             }
         }
+    }
+
+    pub fn update_buffers(&mut self, window: &Window, renderable_store: &SceneRenderableStore) {
+        // Note: This is a stopgap solution!
+        for (entity, renderable) in renderable_store.renderables().iter() {
+            if !self.buffer_cache.contains_key(entity) {
+                match renderable.render_data {
+                    RenderData::Mesh(ref mesh) => {
+                        let vertices: Vec<_> = mesh.vertices.iter()
+                                                    .map(|v| RenderVertex::from(v))
+                                                    .collect();
+                        let normals: Vec<_> = mesh.normals.iter()
+                                                  .map(|n| RenderNormal::from(n))
+                                                  .collect();
+
+                        let vertex_buffer = glium::VertexBuffer::new(&window.display, &vertices).unwrap();
+                        let normal_buffer = glium::VertexBuffer::new(&window.display, &normals).unwrap();
+                        let index_buffer = glium::IndexBuffer::new(&window.display,
+                            glium::index::PrimitiveType::TrianglesList,
+                            &mesh.indices).unwrap();
+
+                        self.buffer_cache.insert(entity.clone(), ComponentBufferData {
+                            vertices: vertex_buffer,
+                            normals: normal_buffer,
+                            indices: index_buffer
+                        });
+                    },
+                    _ => ()
+                }
+            }
+        }
+    }
+}
+
+impl RenderVertex {
+    #[allow(dead_code)]
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        RenderVertex {
+            pos: [x, y, z]
+        }
+    }
+}
+
+impl<'a> From<&'a cgmath::Point3<f32>> for RenderVertex {
+    fn from(point: &'a cgmath::Point3<f32>) -> Self {
+        RenderVertex { pos: [ point.x, point.y, point.z ]}
+    }
+}
+
+impl RenderNormal {
+    #[allow(dead_code)]
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        RenderNormal {
+            normal: [x, y, z]
+        }
+    }
+}
+
+impl<'a> From<&'a cgmath::Vector3<f32>> for RenderNormal {
+    fn from(vector: &'a cgmath::Vector3<f32>) -> Self {
+        RenderNormal { normal: [ vector.x, vector.y, vector.z ]}
     }
 }
