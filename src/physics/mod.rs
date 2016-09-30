@@ -1,5 +1,10 @@
 mod physics_component;
-pub use self::physics_component::*;
+pub use self::physics_component::{
+    PhysicsComponentStore,
+    PhysicsComponent,
+    PhysicsComponentsView,
+    MutablePhysicsComponentsView
+};
 
 mod physics_engine;
 pub use self::physics_engine::PhysicsEngine;
