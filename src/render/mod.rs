@@ -5,7 +5,6 @@ pub use self::scene_renderable::{
         MeshRenderable,
         RenderData,
         SceneRenderable,
-        SceneRenderableIdentifier,
         SceneRenderableStore
 };
 

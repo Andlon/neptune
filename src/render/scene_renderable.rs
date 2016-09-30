@@ -1,5 +1,5 @@
 use entity::Entity;
-use store::{Identifier, OneToOneStore};
+use store::{OneToOneStore};
 
 use std::collections::HashMap;
 use cgmath::{Point3, Vector3};
@@ -26,16 +26,6 @@ pub struct SceneRenderable {
     // For now we only have a concept of a single color for the entire
     // renderable. TODO: Split this into a Material struct
     pub color: Color
-}
-
-#[derive(Clone, Copy, Hash, Eq, PartialEq)]
-pub struct SceneRenderableIdentifier {
-    id: u32
-}
-
-impl Identifier for SceneRenderableIdentifier {
-    fn new(id: u32) -> Self { SceneRenderableIdentifier { id: id } }
-    fn id(&self) -> u32 { self.id }
 }
 
 pub struct SceneRenderableStore {
