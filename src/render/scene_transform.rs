@@ -1,7 +1,6 @@
-use store::OneToOneStore;
 use entity::Entity;
-
 use cgmath::{Point3, Vector3, Matrix4, EuclideanSpace, Quaternion};
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug)]
 pub struct SceneTransform {
@@ -32,21 +31,21 @@ impl SceneTransform {
 }
 
 pub struct SceneTransformStore {
-    store: OneToOneStore<SceneTransform>,
+    transforms: HashMap<Entity, SceneTransform>
 }
 
 impl SceneTransformStore {
     pub fn new() -> SceneTransformStore {
         SceneTransformStore {
-            store: OneToOneStore::new()
+            transforms: HashMap::new()
         }
     }
 
     pub fn set_transform(&mut self, entity: Entity, transform: SceneTransform) {
-        self.store.set_component(entity, transform);
+        self.transforms.insert(entity, transform);
     }
 
     pub fn lookup(&self, entity: &Entity) -> Option<&SceneTransform> {
-        self.store.lookup(entity)
+        self.transforms.get(entity)
     }
 }

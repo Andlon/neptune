@@ -13,7 +13,6 @@ mod entity;
 mod engine;
 mod render;
 mod physics;
-mod store;
 mod input_manager;
 mod geometry;
 mod message;

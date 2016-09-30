@@ -1,5 +1,4 @@
 use entity::Entity;
-use store::{OneToOneStore};
 
 use std::collections::HashMap;
 use cgmath::{Point3, Vector3};
@@ -29,21 +28,21 @@ pub struct SceneRenderable {
 }
 
 pub struct SceneRenderableStore {
-    store: OneToOneStore<SceneRenderable>,
+    renderables: HashMap<Entity, SceneRenderable>
 }
 
 impl SceneRenderableStore {
     pub fn new() -> SceneRenderableStore {
         SceneRenderableStore {
-            store: OneToOneStore::new()
+            renderables: HashMap::new()
         }
     }
 
     pub fn set_renderable(&mut self, entity: Entity, renderable: SceneRenderable) {
-        self.store.set_component(entity, renderable)
+        self.renderables.insert(entity, renderable);
     }
 
     pub fn renderables(&self) -> &HashMap<Entity, SceneRenderable> {
-        &self.store.components
+        &self.renderables
     }
 }
