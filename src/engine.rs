@@ -195,7 +195,7 @@ fn initialize_scene(entity_manager: &mut EntityManager, stores: &mut ComponentSt
     let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
 
     use entity::blueprints;
-    use geometry::Sphere;
+    use geometry::{Sphere, Cuboid};
 
     {
         let sphere = Sphere {
@@ -252,22 +252,16 @@ fn initialize_scene(entity_manager: &mut EntityManager, stores: &mut ComponentSt
     }
 
     {
-        // Add a big box for testing
-        let box_mass = 0.2;
-        let box_inertia_tensor = box_mass * Matrix3::from_diagonal(Vector3::new(500.0, 500.0, 200.0)) / 12.0;
-        let box_position = Point3::new(0.0, -40.0, 0.0);
-        let box_entity = entity_manager.create();
-        let box_renderable = SceneRenderable { color: green, .. box_renderable(5.0, 5.0, 10.0) };
-        let box_collision_model = CollisionModel::cuboid(Vector3::new(5.0, 5.0, 10.0), Quaternion::new(1.0, 0.0, 0.0, 0.0));
-        stores.scene.set_renderable(box_entity, box_renderable);
-        stores.physics.set_component_properties(box_entity,
-            PhysicsComponent {
-                position: box_position,
-                mass: box_mass,
-                inertia_body: box_inertia_tensor,
-                .. PhysicsComponent::default()
-            });
-        stores.collision.set_component_model(box_entity, box_collision_model);
+        let cuboid = Cuboid {
+            center: Point3::new(0.0, -40.0, 0.0),
+            half_size: Vector3::new(5.0, 5.0, 10.0),
+            rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
+        };
+
+        let mut blueprint = blueprints::cuboid(cuboid, 0.2);
+        blueprint.renderable.as_mut().unwrap().color = green;
+        blueprint.physics.as_mut().unwrap().position = Point3::new(0.0, -40.0, 0.0);
+        stores.assemble_blueprint(entity_manager.create(), blueprint);
     }
 
     Camera::look_in(Point3::new(40.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()
