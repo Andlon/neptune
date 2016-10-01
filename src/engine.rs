@@ -12,7 +12,7 @@ pub struct Engine {
     should_continue: bool
 }
 
-pub struct ComponentStores {
+struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: SceneTransformStore,
     pub physics: PhysicsComponentStore,
@@ -44,13 +44,22 @@ impl ComponentStores {
     }
 }
 
+pub struct SceneBlueprint {
+    pub blueprints: Vec<EntityBlueprint>,
+    pub camera: Camera
+}
+
+pub trait SceneInitializer {
+    fn create_scene(&self, index: usize) -> Option<SceneBlueprint>;
+}
+
 impl Engine {
 
     pub fn new() -> Engine {
         Engine { should_continue: true }
     }
 
-    pub fn run(&mut self) {
+    pub fn run<Initializer>(&mut self, initializer: &Initializer)  where Initializer: SceneInitializer {
         let window = Window::new();
 
         const TIMESTEP: f64 = 0.02;
@@ -61,7 +70,8 @@ impl Engine {
         let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
-        let camera = initialize_scene(&mut entity_manager, &mut stores);
+        let camera = reinitialize_scene(&mut entity_manager, &mut stores, initializer, 0)
+                      .expect("Initializer must provide scene for index 0!");
         systems.camera.set_camera(camera);
 
         while self.should_continue {
@@ -183,84 +193,20 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
     }
 }
 
-fn initialize_scene(entity_manager: &mut EntityManager, stores: &mut ComponentStores)
-    -> Camera {
-    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion};
+fn reinitialize_scene(entity_manager: &mut EntityManager,
+                    stores: &mut ComponentStores,
+                    initializer: &SceneInitializer,
+                    index: usize) 
+                    -> Option<Camera> {
+    let scene = initializer.create_scene(index);
+    if let Some(scene) = scene {
+        // TODO: Clear state from all component stores
+        for blueprint in scene.blueprints {
+            stores.assemble_blueprint(entity_manager.create(), blueprint);
+        }
 
-    let blue = Color::rgb(0.0, 0.0, 1.0);
-    let red = Color::rgb(1.0, 0.0, 0.0);
-    let green = Color::rgb(0.0, 1.0, 0.0);
-    let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
-
-    use entity::blueprints;
-    use geometry::{Sphere, Cuboid};
-
-    {
-        let sphere = Sphere {
-            center: Point3::origin(),
-            radius: 5.0
-        };
-        let mut blueprint = blueprints::sphere(sphere, 1e11, 4);
-        blueprint.renderable.as_mut().unwrap().color = blue;
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
+        Some(scene.camera)
+    } else {
+        None
     }
-
-    {
-        let sphere = Sphere {
-            center: Point3::new(0.0, 15.0, 15.0),
-            radius: 1.0
-        };
-        let mut blueprint = blueprints::sphere(sphere, 1.0, 3);
-        blueprint.renderable.as_mut().unwrap().color = graybrown;
-        blueprint.physics.as_mut().unwrap().velocity = Vector3::new(0.0, 2.5, 0.0);
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
-    }
-
-    {
-        let sphere = Sphere {
-            center: Point3::new(5.0, 15.0, 0.0),
-            radius: 1.0
-        };
-        let mut blueprint = blueprints::sphere(sphere, 1.0, 3);
-        blueprint.renderable.as_mut().unwrap().color = red;
-        blueprint.physics.as_mut().unwrap().velocity = Vector3::new(0.0, 0.0, 1.5);
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
-    }
-
-    {
-        let sphere = Sphere {
-            center: Point3::new(0.0, 15.0, -5.0),
-            radius: 1.0
-        };
-        let mut blueprint = blueprints::sphere(sphere, 1.0, 3);
-        blueprint.renderable.as_mut().unwrap().color = red;
-        blueprint.physics.as_mut().unwrap().velocity = Vector3::new(0.0, 1.0, 2.0);
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
-    }
-
-    {
-        let sphere = Sphere {
-            center: Point3::new(0.0, 15.0, 0.0),
-            radius: 1.0
-        };
-        let mut blueprint = blueprints::sphere(sphere, 1.0, 3);
-        blueprint.renderable.as_mut().unwrap().color = red;
-        blueprint.physics.as_mut().unwrap().velocity = Vector3::new(0.0, -2.0, 0.0);
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
-    }
-
-    {
-        let cuboid = Cuboid {
-            center: Point3::new(0.0, -40.0, 0.0),
-            half_size: Vector3::new(5.0, 5.0, 10.0),
-            rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
-        };
-
-        let mut blueprint = blueprints::cuboid(cuboid, 0.2);
-        blueprint.renderable.as_mut().unwrap().color = green;
-        blueprint.physics.as_mut().unwrap().position = Point3::new(0.0, -40.0, 0.0);
-        stores.assemble_blueprint(entity_manager.create(), blueprint);
-    }
-
-    Camera::look_in(Point3::new(40.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z()).unwrap()
 }
