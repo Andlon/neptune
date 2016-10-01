@@ -17,6 +17,7 @@ struct ComponentStores {
     pub transform: SceneTransformStore,
     pub physics: PhysicsComponentStore,
     pub collision: CollisionComponentStore,
+    pub camera: Camera
 }
 
 struct Systems {
@@ -70,9 +71,8 @@ impl Engine {
         let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
-        let camera = reinitialize_scene(&mut entity_manager, &mut stores, initializer, 0)
-                      .expect("Initializer must provide scene for index 0!");
-        systems.camera.set_camera(camera);
+        let scene = initializer.create_scene(0).expect("Initializer must provide scene 0!");
+        reassemble_scene(&mut entity_manager, &mut stores, scene);
 
         while self.should_continue {
             let frame_time = time_keeper.produce_frame();
@@ -86,13 +86,13 @@ impl Engine {
             let progress = time_keeper.accumulated() / TIMESTEP;
             interpolate_transforms(&mut stores.transform, &stores.physics, progress);
 
-            let camera = systems.camera.update(frame_time);
+            stores.camera = systems.camera.update(stores.camera, frame_time);
 
             systems.scene.update_buffers(&window, &stores.scene);
 
             // Render
             let mut frame = window.begin_frame();
-            systems.scene.render(&mut frame, camera, &stores.scene, &stores.transform);
+            systems.scene.render(&mut frame, stores.camera.clone(), &stores.scene, &stores.transform);
             frame.finish();
 
             let messages = window.check_events();
@@ -128,21 +128,21 @@ impl MessageReceiver for Engine {
 }
 
 fn prepare_component_stores() -> ComponentStores {
+    use cgmath::{Point3, Vector3, EuclideanSpace};
     ComponentStores {
         scene: SceneRenderableStore::new(),
         transform: SceneTransformStore::new(),
         physics: PhysicsComponentStore::new(),
-        collision: CollisionComponentStore::new()
+        collision: CollisionComponentStore::new(),
+        camera: Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap()
     }
 }
 
 fn prepare_systems(window: &Window) -> Systems {
-    use cgmath::{Point3, Vector3, EuclideanSpace};
-    let default_camera = Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap();
     Systems {
         scene: SceneRenderer::new(window),
         input: InputManager::new(),
-        camera: CameraController::from(default_camera),
+        camera: CameraController::new(),
         physics: PhysicsEngine::new(),
         collision: CollisionEngine::new()
     }
@@ -193,20 +193,13 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
     }
 }
 
-fn reinitialize_scene(entity_manager: &mut EntityManager,
-                    stores: &mut ComponentStores,
-                    initializer: &SceneInitializer,
-                    index: usize) 
-                    -> Option<Camera> {
-    let scene = initializer.create_scene(index);
-    if let Some(scene) = scene {
-        // TODO: Clear state from all component stores
-        for blueprint in scene.blueprints {
-            stores.assemble_blueprint(entity_manager.create(), blueprint);
-        }
+fn reassemble_scene(entity_manager: &mut EntityManager,
+                       stores: &mut ComponentStores,
+                       scene: SceneBlueprint) {
+    stores.camera = scene.camera;
 
-        Some(scene.camera)
-    } else {
-        None
+    // TODO: Clear stores
+    for blueprint in scene.blueprints {
+        stores.assemble_blueprint(entity_manager.create(), blueprint);
     }
 }

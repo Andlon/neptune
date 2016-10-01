@@ -27,8 +27,6 @@ pub enum CameraAction {
 }
 
 pub struct CameraController {
-    camera: Camera,
-
     // Current controller state
     translate_forward: bool,
     translate_backward: bool,
@@ -42,10 +40,9 @@ pub struct CameraController {
     twist_left: bool
 }
 
-impl From<Camera> for CameraController {
-    fn from(camera: Camera) -> Self {
+impl CameraController {
+    pub fn new() -> Self {
         CameraController {
-            camera: camera,
             translate_forward: false,
             translate_backward: false,
             translate_left: false,
@@ -61,12 +58,8 @@ impl From<Camera> for CameraController {
 }
 
 impl CameraController {
-    #[allow(dead_code)]
-    pub fn camera(&self) -> Camera {
-        self.camera
-    }
 
-    pub fn update(&mut self, frame_time: f64) -> Camera {
+    pub fn update(&mut self, camera: Camera, frame_time: f64) -> Camera {
         assert!(frame_time >= 0.0);
         const TRANSLATION_SPEED: f64 = 4.0;
         const ROTATION_SPEED: f64 = 1.5;
@@ -74,33 +67,26 @@ impl CameraController {
         let trans_amount = (TRANSLATION_SPEED * frame_time) as f32;
         let rot_angle = (ROTATION_SPEED * frame_time) as f32;
 
-        let translation = trans_amount * self.determine_direction();
-        let rotated_camera = self.rotate_camera(rot_angle);
+        let translation = trans_amount * self.determine_direction(&camera);
+        let rotated_camera = self.rotate_camera(camera, rot_angle);
 
-        self.camera = rotated_camera.translate(translation);
-        self.camera
+        rotated_camera.translate(translation)
     }
 
-    pub fn set_camera(&mut self, camera: Camera) {
-        self.camera = camera;
-    }
-
-    fn determine_direction(&self) -> Vector3<f32> {
+    fn determine_direction(&self, camera: &Camera) -> Vector3<f32> {
         let mut direction = Vector3::zero();
-        let cam = &self.camera;
 
-        if self.translate_forward { direction += cam.direction(); };
-        if self.translate_backward { direction -= cam.direction(); };
-        if self.translate_left { direction -= cam.right(); };
-        if self.translate_right { direction += cam.right(); };
+        if self.translate_forward { direction += camera.direction(); };
+        if self.translate_backward { direction -= camera.direction(); };
+        if self.translate_left { direction -= camera.right(); };
+        if self.translate_right { direction += camera.right(); };
 
         if direction.is_zero() { direction} else { direction.normalize() }
     }
 
-    fn rotate_camera(&self, angle: f32) -> Camera {
+    fn rotate_camera(&self, mut camera: Camera, angle: f32) -> Camera {
         use cgmath::Rad;
         let angle = Rad(angle);
-        let mut camera = self.camera.clone();
 
         if self.rotate_right { camera = camera.rotate_axis_angle(camera.up(), -angle); }
         if self.rotate_left  { camera = camera.rotate_axis_angle(camera.up(), angle); }
