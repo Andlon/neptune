@@ -9,7 +9,10 @@ use time_keeper::TimeKeeper;
 use std;
 
 pub struct Engine {
-    should_continue: bool
+    should_continue: bool,
+    systems: Systems,
+    stores: ComponentStores,
+    entity_manager: EntityManager
 }
 
 struct ComponentStores {
@@ -69,7 +72,12 @@ pub trait SceneInitializer {
 impl Engine {
 
     pub fn new() -> Engine {
-        Engine { should_continue: true }
+        Engine {
+            should_continue: true,
+            systems: Systems::new(),
+            stores: prepare_component_stores(),
+            entity_manager: EntityManager::new()
+        }
     }
 
     pub fn run<Initializer>(&mut self, initializer: &Initializer)  where Initializer: SceneInitializer {
@@ -77,51 +85,48 @@ impl Engine {
 
         const TIMESTEP: f64 = 0.02;
 
-        let mut entity_manager = EntityManager::new();
-        let mut stores = prepare_component_stores();
-        let mut systems = Systems::new();
         let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
-        systems.scene.compile_shaders(&window);
+        self.systems.scene.compile_shaders(&window);
 
         let scene = initializer.create_scene(0).expect("Initializer must provide scene 0!");
-        reassemble_scene(&mut entity_manager, &mut stores, scene);
+        reassemble_scene(&mut self.entity_manager, &mut self.stores, scene);
 
         while self.should_continue {
             let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
-                systems.physics.simulate(TIMESTEP, &mut stores.physics);
-                systems.collision.detect_collisions(&stores.physics, &stores.collision, &mut contacts);
-                systems.collision.resolve_collisions(&mut stores.physics, &contacts);
+                self.systems.physics.simulate(TIMESTEP, &mut self.stores.physics);
+                self.systems.collision.detect_collisions(&self.stores.physics, &self.stores.collision, &mut contacts);
+                self.systems.collision.resolve_collisions(&mut self.stores.physics, &contacts);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
-            interpolate_transforms(&mut stores.transform, &stores.physics, progress);
+            interpolate_transforms(&mut self.stores.transform, &self.stores.physics, progress);
 
-            stores.camera = systems.camera.update(stores.camera, frame_time);
+            self.stores.camera = self.systems.camera.update(self.stores.camera, frame_time);
 
-            systems.scene.update_buffers(&window, &stores.scene);
+            self.systems.scene.update_buffers(&window, &self.stores.scene);
 
             // Render
             let mut frame = window.begin_frame();
-            systems.scene.render(&mut frame, stores.camera.clone(), &stores.scene, &stores.transform);
+            self.systems.scene.render(&mut frame, self.stores.camera.clone(), &self.stores.scene, &self.stores.transform);
             frame.finish();
 
             let messages = window.check_events();
-            self.dispatch_messages(messages, &mut systems);
+            self.dispatch_messages(messages);
         }
     }
 
-    fn dispatch_messages(&mut self, messages: Vec<Message>, systems: &mut Systems) {
+    fn dispatch_messages(&mut self, messages: Vec<Message>) {
         let mut messages = messages;
         let mut response = Vec::new();
 
         while !messages.is_empty() {
             response.clear();
-            response.extend(systems.input.process_messages(&messages));
-            response.extend(systems.camera.process_messages(&messages));
+            response.extend(self.systems.input.process_messages(&messages));
+            response.extend(self.systems.camera.process_messages(&messages));
             response.extend(self.process_messages(&messages));
 
             std::mem::swap(&mut messages, &mut response);
