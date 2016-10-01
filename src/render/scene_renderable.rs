@@ -45,4 +45,8 @@ impl SceneRenderableStore {
     pub fn renderables(&self) -> &HashMap<Entity, SceneRenderable> {
         &self.renderables
     }
+
+    pub fn clear(&mut self) {
+        self.renderables.clear();
+    }
 }

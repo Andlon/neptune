@@ -36,6 +36,7 @@ impl SceneInitializer for Initializer {
     fn create_scene(&self, index: usize) -> Option<SceneBlueprint> {
         match index {
             0 => Some(self.create_scene0()),
+            1 => Some(self.create_scene1()),
             _ => None
         }
     }
@@ -60,9 +61,8 @@ struct CuboidObject {
 }
 
 fn main() {
-    let initializer = Initializer;
-    let mut engine = Engine::new();
-    engine.run(&initializer);
+    let mut engine = Engine::new(Initializer);
+    engine.run();
 }
 
 impl Default for SphereObject {
@@ -241,6 +241,36 @@ impl Initializer {
                          .orientation(Quaternion::new(1.0, 0.0, 0.0, 0.0))
                          .mass(0.2)
                          .color(green)
+                         .create_blueprint()
+        ];
+
+        SceneBlueprint {
+            blueprints: blueprints,
+            camera: camera
+        }
+    }
+
+    fn create_scene1(&self) -> SceneBlueprint {
+        let camera = Camera::look_in(Point3::new(40.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z())
+                            .unwrap();
+
+        let red = Color::rgb(1.0, 0.0, 0.0);
+        let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
+
+        let blueprints = vec![
+            SphereObject::default()
+                         .center(Point3::new(0.0, 0.0, 10.0))
+                         .velocity(Vector3::new(0.0, 0.0, -1.0))
+                         .radius(1.0)
+                         .mass(1.0)
+                         .color(graybrown)
+                         .create_blueprint(),
+
+            CuboidObject::default()
+                         .center(Point3::new(0.0, 0.0, -1.0))
+                         .half_size(Vector3::new(5.0, 5.0, 1.0))
+                         .mass(10.0)
+                         .color(red)
                          .create_blueprint()
         ];
 

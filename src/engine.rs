@@ -8,7 +8,8 @@ use camera::{Camera, CameraController};
 use time_keeper::TimeKeeper;
 use std;
 
-pub struct Engine {
+pub struct Engine<Initializer: SceneInitializer> {
+    initializer: Initializer,
     should_continue: bool,
     systems: Systems,
     stores: ComponentStores,
@@ -58,6 +59,13 @@ impl ComponentStores {
             self.scene.set_renderable(entity, renderable);
         }
     }
+
+    pub fn clear(&mut self) {
+        self.scene.clear();
+        self.transform.clear();
+        self.physics.clear();
+        self.collision.clear();
+    }
 }
 
 pub struct SceneBlueprint {
@@ -69,10 +77,11 @@ pub trait SceneInitializer {
     fn create_scene(&self, index: usize) -> Option<SceneBlueprint>;
 }
 
-impl Engine {
+impl<I> Engine<I> where I: SceneInitializer {
 
-    pub fn new() -> Engine {
+    pub fn new(initializer: I) -> Engine<I> {
         Engine {
+            initializer: initializer,
             should_continue: true,
             systems: Systems::new(),
             stores: prepare_component_stores(),
@@ -80,7 +89,7 @@ impl Engine {
         }
     }
 
-    pub fn run<Initializer>(&mut self, initializer: &Initializer)  where Initializer: SceneInitializer {
+    pub fn run(&mut self) {
         let window = Window::new();
 
         const TIMESTEP: f64 = 0.02;
@@ -90,7 +99,7 @@ impl Engine {
 
         self.systems.scene.compile_shaders(&window);
 
-        let scene = initializer.create_scene(0).expect("Initializer must provide scene 0!");
+        let scene = self.initializer.create_scene(0).expect("Initializer must provide scene 0!");
         reassemble_scene(&mut self.entity_manager, &mut self.stores, scene);
 
         while self.should_continue {
@@ -134,11 +143,18 @@ impl Engine {
     }
 }
 
-impl MessageReceiver for Engine {
+impl<I> MessageReceiver for Engine<I> where I: SceneInitializer {
     fn process_messages(&mut self, messages: &[Message]) -> Vec<Message> {
         for message in messages {
             match message.clone() {
                 Message::WindowClosed => self.should_continue = false,
+                Message::ReloadScene { index } => {
+                    let new_scene = self.initializer.create_scene(index);
+                    if let Some(new_scene) = new_scene {
+                        self.stores.camera = new_scene.camera;
+                        reassemble_scene(&mut self.entity_manager, &mut self.stores, new_scene);
+                    }
+                }
                 _ => ()
             };
         }
@@ -203,11 +219,11 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 }
 
 fn reassemble_scene(entity_manager: &mut EntityManager,
-                       stores: &mut ComponentStores,
-                       scene: SceneBlueprint) {
+                    stores: &mut ComponentStores,
+                    scene: SceneBlueprint) {
     stores.camera = scene.camera;
 
-    // TODO: Clear stores
+    stores.clear();
     for blueprint in scene.blueprints {
         stores.assemble_blueprint(entity_manager.create(), blueprint);
     }

@@ -41,6 +41,8 @@ impl InputManager {
             VirtualKeyCode::Up    if released => camera(CameraAction::RotateUpEnd),
             VirtualKeyCode::Down  if pressed  => camera(CameraAction::RotateDownBegin),
             VirtualKeyCode::Down  if released => camera(CameraAction::RotateDownEnd),
+            VirtualKeyCode::Key0  if released => Some(Message::ReloadScene { index: 0 }),
+            VirtualKeyCode::Key1  if released => Some(Message::ReloadScene { index: 1 }),
             _ => None,
         };
 

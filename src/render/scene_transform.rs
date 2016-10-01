@@ -48,4 +48,8 @@ impl SceneTransformStore {
     pub fn lookup(&self, entity: &Entity) -> Option<&SceneTransform> {
         self.transforms.get(entity)
     }
+
+    pub fn clear(&mut self) {
+        self.transforms.clear();
+    }
 }

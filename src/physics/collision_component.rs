@@ -53,4 +53,10 @@ impl CollisionComponentStore {
     pub fn entities<'a>(&'a self) -> &'a [Entity] {
         self.entities.as_slice()
     }
+
+    pub fn clear(&mut self) {
+        self.models.clear();
+        self.entity_map.clear();
+        self.entities.clear();
+    }
 }

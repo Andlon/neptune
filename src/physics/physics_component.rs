@@ -209,4 +209,18 @@ impl PhysicsComponentStore {
             prev_acceleration: &mut self.prev_acceleration,
         }
     }
+
+    pub fn clear(&mut self) {
+        self.position.clear();
+        self.velocity.clear();
+        self.orientation.clear();
+        self.angular_momentum.clear();
+        self.mass.clear();
+        self.inv_inertia_body.clear();
+        self.acceleration.clear();
+        self.prev_position.clear();
+        self.prev_orientation.clear();
+        self.prev_acceleration.clear();
+        self.entity_map.clear();
+    }
 }
