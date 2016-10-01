@@ -1,7 +1,7 @@
 use entity::{EntityManager, EntityBlueprint, Entity};
 use render::*;
-use physics::{PhysicsComponent, PhysicsEngine, CollisionComponentStore,
-    PhysicsComponentStore, CollisionEngine, CollisionModel, ContactCollection};
+use physics::{PhysicsEngine, CollisionComponentStore,
+    PhysicsComponentStore, CollisionEngine, ContactCollection};
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -19,7 +19,7 @@ pub struct ComponentStores {
     pub collision: CollisionComponentStore,
 }
 
-pub struct Systems {
+struct Systems {
     pub scene: SceneRenderer,
     pub input: InputManager,
     pub camera: CameraController,
@@ -185,9 +185,7 @@ fn interpolate_transforms(transforms: &mut SceneTransformStore,
 
 fn initialize_scene(entity_manager: &mut EntityManager, stores: &mut ComponentStores)
     -> Camera {
-    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion, Matrix3, SquareMatrix, Zero};
-
-    use std::f32;
+    use cgmath::{Point3, Vector3, EuclideanSpace, Quaternion};
 
     let blue = Color::rgb(0.0, 0.0, 1.0);
     let red = Color::rgb(1.0, 0.0, 0.0);

@@ -1,4 +1,3 @@
-use cgmath::{Vector3, Quaternion, Point3, EuclideanSpace};
 use entity::Entity;
 use std::collections::HashMap;
 use geometry::{Sphere, Cuboid};
@@ -9,23 +8,6 @@ pub type CollisionComponentId = usize;
 pub enum CollisionModel {
     Sphere(Sphere<f64>),
     Cuboid(Cuboid<f64>)
-}
-
-impl CollisionModel {
-    pub fn sphere(radius: f64) -> Self {
-        CollisionModel::Sphere(Sphere {
-            center: Point3::origin(),
-            radius: radius
-        })
-    }
-
-    pub fn cuboid(half_size: Vector3<f64>, rotation: Quaternion<f64>) -> Self {
-        CollisionModel::Cuboid(Cuboid {
-            half_size: half_size,
-            rotation: rotation,
-            center: Point3::origin()
-        })
-    }
 }
 
 pub struct CollisionComponentStore {

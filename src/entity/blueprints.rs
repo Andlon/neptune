@@ -1,5 +1,5 @@
 use ::entity::EntityBlueprint;
-use render::{SceneTransform, SceneRenderable, unit_sphere_renderable, box_renderable};
+use render::{SceneTransform, unit_sphere_renderable, box_renderable};
 use geometry::{Sphere, Cuboid};
 use physics::{PhysicsComponent, CollisionModel};
 use cgmath::{Matrix3, SquareMatrix, Point3, Vector3, EuclideanSpace};
