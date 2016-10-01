@@ -28,6 +28,18 @@ struct Systems {
     pub collision: CollisionEngine
 }
 
+impl Systems {
+    pub fn new() -> Self {
+        Systems {
+            scene: SceneRenderer::new(),
+            input: InputManager::new(),
+            camera: CameraController::new(),
+            physics: PhysicsEngine::new(),
+            collision: CollisionEngine::new()
+        }
+    }
+}
+
 impl ComponentStores {
     pub fn assemble_blueprint(&mut self, entity: Entity, blueprint: EntityBlueprint) {
         if let Some(physics) = blueprint.physics {
@@ -67,9 +79,11 @@ impl Engine {
 
         let mut entity_manager = EntityManager::new();
         let mut stores = prepare_component_stores();
-        let mut systems = prepare_systems(&window);
+        let mut systems = Systems::new();
         let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
+
+        systems.scene.compile_shaders(&window);
 
         let scene = initializer.create_scene(0).expect("Initializer must provide scene 0!");
         reassemble_scene(&mut entity_manager, &mut stores, scene);
@@ -135,16 +149,6 @@ fn prepare_component_stores() -> ComponentStores {
         physics: PhysicsComponentStore::new(),
         collision: CollisionComponentStore::new(),
         camera: Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap()
-    }
-}
-
-fn prepare_systems(window: &Window) -> Systems {
-    Systems {
-        scene: SceneRenderer::new(window),
-        input: InputManager::new(),
-        camera: CameraController::new(),
-        physics: PhysicsEngine::new(),
-        collision: CollisionEngine::new()
     }
 }
 

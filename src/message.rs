@@ -5,7 +5,8 @@ use camera::CameraAction;
 pub enum Message {
     WindowClosed,
     KeyboardInputReceived(ElementState, VirtualKeyCode),
-    CameraCommand(CameraAction)
+    CameraCommand(CameraAction),
+    ReloadScene { index: usize }
 }
 
 pub trait MessageReceiver {

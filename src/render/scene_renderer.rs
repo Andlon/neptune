@@ -47,89 +47,14 @@ struct ComponentBufferData {
 }
 
 pub struct SceneRenderer {
-    program: glium::Program,
+    program: Option<glium::Program>,
     buffer_cache: HashMap<Entity, ComponentBufferData>
 }
 
 impl SceneRenderer {
-    pub fn new(window: &Window) -> SceneRenderer {
-        let vertex_shader_src = r#"
-            #version 330
-            in vec3 pos;
-            in vec3 normal;
-
-            uniform mat4 perspective;
-            uniform mat4 view;
-            uniform mat4 model;
-
-            out vec3 vertex_normal;
-            out vec3 vertex_position;
-
-            void main() {
-                mat4 modelview = view * model;
-                gl_Position = perspective * modelview * vec4(pos, 1.0);
-                vertex_normal = transpose(inverse(mat3(modelview))) * normal;
-                vertex_position = vec3(modelview * vec4(pos, 1.0));
-            }
-        "#;
-
-        let fragment_shader_src = r#"
-            #version 330
-
-            in vec3 vertex_normal;
-            in vec3 vertex_position;
-
-            out vec4 color;
-
-            uniform vec3 light_direction;
-            uniform vec3 diffuse_color;
-
-            const vec3 u_ambient_intensity = vec3(0.05, 0.05, 0.05);
-            const vec3 u_diffuse_intensity = vec3(0.6, 0.6, 0.6);
-            const vec3 u_specular_intensity = vec3(0.90, 0.90, 0.90);
-            const float shininess = 32.0;
-
-            vec3 specular_lighting(vec3 v_normal, vec3 light_dir, vec3 camera_dir) {
-                vec3 half_direction = normalize(light_dir + camera_dir);
-
-                float specular_weight = 0;
-                if (dot(v_normal, light_dir) > 0) {
-                    specular_weight = pow(max(dot(half_direction, v_normal), 0.0), shininess);
-                }
-
-                return specular_weight * u_specular_intensity;
-            }
-
-            vec3 diffuse_lighting(vec3 v_normal, vec3 light_dir) {
-                float diffuse_weight = max(dot(v_normal, light_dir), 0.0);
-                return diffuse_weight * u_diffuse_intensity * diffuse_color;
-            }
-
-            vec3 ambient_lighting() {
-                return u_ambient_intensity * u_diffuse_intensity * diffuse_color;
-            }
-
-            void main() {
-                vec3 v_normal = normalize(vertex_normal);
-                vec3 l_dir = normalize(light_direction);
-                vec3 camera_dir = normalize(-vertex_position);
-
-                vec3 ambient = ambient_lighting();
-                vec3 diffuse = diffuse_lighting(v_normal, l_dir);
-                vec3 specular = specular_lighting(v_normal, l_dir, camera_dir);
-
-                color = vec4(ambient + diffuse + specular, 1.0);
-            }
-        "#;
-
-        let display = &window.display;
-        let program = glium::Program::from_source(display,
-            vertex_shader_src,
-            fragment_shader_src,
-            None).unwrap();
-
+    pub fn new() -> SceneRenderer {
         SceneRenderer {
-            program: program,
+            program: None,
             buffer_cache: HashMap::new()
         }
     }
@@ -180,12 +105,24 @@ impl SceneRenderer {
                     (&component_data.vertices as &VertexBuffer<RenderVertex>,
                      &component_data.normals as &VertexBuffer<RenderNormal>),
                     &component_data.indices as &IndexBuffer<u32>,
-                    &self.program,
+                    self.program.as_ref().expect("Shader must be compiled before rendering!"),
                     &uniforms,
                     &params
                 ).unwrap();
             }
         }
+    }
+
+    pub fn compile_shaders(&mut self, window: &Window) {
+        let vertex_shader_src = include_str!("shaders/default_vertex.glsl");
+        let fragment_shader_src = include_str!("shaders/default_fragment.glsl");
+
+        let display = &window.display;
+        let program = glium::Program::from_source(display,
+            vertex_shader_src,
+            fragment_shader_src,
+            None).unwrap();
+        self.program = Some(program);
     }
 
     pub fn update_buffers(&mut self, window: &Window, renderable_store: &SceneRenderableStore) {
