@@ -28,6 +28,7 @@ impl Window {
             display: glium::glutin::WindowBuilder::new()
                         .with_depth_buffer(24)
                         .with_vsync()
+                        .with_multisampling(4)
                         .build_glium().unwrap()
         }
     }
