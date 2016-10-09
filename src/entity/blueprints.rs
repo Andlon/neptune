@@ -38,6 +38,7 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
     blueprint.collision = Some(CollisionModel::Cuboid(Cuboid { center: Point3::origin(), .. cuboid }));
     blueprint.physics = Some(PhysicsComponent {
         position: cuboid.center,
+        orientation: cuboid.rotation,
         inertia_body: inertia_tensor,
         mass: mass,
         .. PhysicsComponent::default()
