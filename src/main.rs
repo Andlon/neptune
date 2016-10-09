@@ -9,6 +9,8 @@ extern crate itertools;
 #[macro_use]
 extern crate approx;
 
+extern crate ordered_float;
+
 mod entity;
 mod engine;
 mod render;
