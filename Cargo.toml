@@ -9,3 +9,4 @@ cgmath = { git = "https://github.com/Andlon/cgmath.git", branch = "invert" }
 time = "0.1.35"
 itertools = "*"
 approx = "*"
+ordered-float="*"

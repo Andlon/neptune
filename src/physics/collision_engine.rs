@@ -58,10 +58,23 @@ impl CollisionEngine {
                             })
                     },
                     // Cuboid-cuboid
-                    (Model::Cuboid(_), Model::Cuboid(_))
+                    (Model::Cuboid(cuboid_i), Model::Cuboid(cuboid_j))
                     => {
-                        // TODO: Implement Cuboid-cuboid collisions
-                        None
+                        let cuboid_i = Cuboid {
+                            rotation: orient_i * cuboid_i.rotation,
+                            center: pos_i + cuboid_i.center.to_vec(),
+                            .. cuboid_i
+                        };
+                        let cuboid_j = Cuboid {
+                            rotation: orient_j * cuboid_j.rotation,
+                            center: pos_j + cuboid_j.center.to_vec(),
+                            .. cuboid_j
+                        };
+                        contact_cuboid_cuboid(cuboid_i, cuboid_j)
+                            .map(|data| Contact {
+                                objects: (entity_i, entity_j),
+                                data: data
+                            })
                     },
                     // Cuboid-sphere
                     (Model::Sphere(sphere), Model::Cuboid(cuboid))
