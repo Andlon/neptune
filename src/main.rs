@@ -178,7 +178,6 @@ impl CuboidObject {
 
         let mut blueprint = blueprints::cuboid(cuboid, self.mass);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.physics.as_mut().unwrap().position = self.center;
         blueprint.physics.as_mut().unwrap().velocity = self.velocity;
         blueprint
     }
@@ -253,25 +252,27 @@ impl Initializer {
     }
 
     fn create_scene1(&self) -> SceneBlueprint {
-        let camera = Camera::look_in(Point3::new(40.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z())
+        let camera = Camera::look_in(Point3::new(20.0, 0.0, 5.0), -Vector3::unit_x(), Vector3::unit_z())
                             .unwrap();
 
         let red = Color::rgb(1.0, 0.0, 0.0);
         let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
 
+        use cgmath::{Rad, Quaternion, Rotation3};
+
         let blueprints = vec![
-            SphereObject::default()
-                         .center(Point3::new(0.0, 0.0, 10.0))
-                         .velocity(Vector3::new(0.0, 0.0, -1.0))
-                         .radius(1.0)
+            CuboidObject::default()
+                         .center(Point3::new(2.5, 0.0, 10.0))
+                         .velocity(Vector3::new(-0.1, 0.0, -1.5))
                          .mass(1.0)
+                         .orientation(Quaternion::from_axis_angle(Vector3::unit_y() + Vector3::unit_x(), Rad(0.8)))
                          .color(graybrown)
                          .create_blueprint(),
 
             CuboidObject::default()
                          .center(Point3::new(0.0, 0.0, -1.0))
-                         .half_size(Vector3::new(5.0, 5.0, 1.0))
-                         .mass(10.0)
+                         .half_size(Vector3::new(5.0, 5.0, 5.0))
+                         .mass(1e11)
                          .color(red)
                          .create_blueprint()
         ];
