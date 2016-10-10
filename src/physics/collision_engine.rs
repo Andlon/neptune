@@ -110,8 +110,8 @@ impl CollisionEngine {
         physics_store: &mut PhysicsComponentStore,
         contacts: &ContactCollection)
     {
-        resolve_interpenetrations(physics_store, contacts);
         resolve_velocities(physics_store, contacts);
+        resolve_interpenetrations(physics_store, contacts);
     }
 }
 
