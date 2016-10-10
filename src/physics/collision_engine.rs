@@ -61,12 +61,12 @@ impl CollisionEngine {
                     (Model::Cuboid(cuboid_i), Model::Cuboid(cuboid_j))
                     => {
                         let cuboid_i = Cuboid {
-                            rotation: orient_i * cuboid_i.rotation,
+                            rotation: (orient_i * cuboid_i.rotation).normalize(),
                             center: pos_i + cuboid_i.center.to_vec(),
                             .. cuboid_i
                         };
                         let cuboid_j = Cuboid {
-                            rotation: orient_j * cuboid_j.rotation,
+                            rotation: (orient_j * cuboid_j.rotation).normalize(),
                             center: pos_j + cuboid_j.center.to_vec(),
                             .. cuboid_j
                         };
