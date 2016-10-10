@@ -103,12 +103,13 @@ pub fn contact_cuboid_cuboid(a: Cuboid<f64>, b: Cuboid<f64>) -> Option<ContactDa
 
     if min_depth >= 0.0 {
         let axis = axes[min_index];
+        let relative_center = b.center - a.center;
+
+        // Ensure normal is pointing from a towards b
+        let normal = if axis.dot(relative_center) < 0.0 { -axis } else { axis };
+
         if min_index < 3 {
             // Face-Vertex contact, with face on 'a'
-            let relative_center = b.center - a.center;
-
-            // Ensure normal is pointing from a towards b
-            let normal = if axis.dot(relative_center) < 0.0 { -axis } else { axis };
 
             // Recall that the face axes correspond to the world coordinates
             // of the axes of the Cuboid's local coordinate system.
@@ -128,11 +129,7 @@ pub fn contact_cuboid_cuboid(a: Cuboid<f64>, b: Cuboid<f64>) -> Option<ContactDa
                 point: Point3::from_vec(vertex)
             })
         } else if min_index < 6 {
-            // Face-Vertex contact, with face on 'a'
-            let relative_center = b.center - a.center;
-
-            // Ensure normal is pointing from a towards b
-            let normal = if axis.dot(relative_center) < 0.0 { -axis } else { axis };
+            // Face-Vertex contact, with face on 'b'
 
             // Recall that the face axes correspond to the world coordinates
             // of the axes of the Cuboid's local coordinate system.
@@ -153,6 +150,7 @@ pub fn contact_cuboid_cuboid(a: Cuboid<f64>, b: Cuboid<f64>) -> Option<ContactDa
             })
         } else {
             // Edge-to-edge contact
+            println!("Unhandled edge-to-edge!");
             None
         }
     } else {
