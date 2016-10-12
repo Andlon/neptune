@@ -1,6 +1,7 @@
 use physics::*;
 use geometry::{Sphere, Cuboid};
 use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix, EuclideanSpace};
+use core::{TransformStore};
 
 pub struct CollisionEngine;
 
@@ -19,7 +20,7 @@ impl CollisionEngine {
     }
 
     pub fn detect_collisions(&self,
-        physics_store: &PhysicsComponentStore,
+        transforms: &TransformStore,
         collision_store: &CollisionComponentStore,
         contacts: &mut ContactCollection)
     {
@@ -32,17 +33,18 @@ impl CollisionEngine {
                 let model_i = collision_store.models()[i];
                 let model_j = collision_store.models()[j];
 
-                // TODO: Can't really use unwrap here,
-                // as we cannot assume that a physics component actually exists
-                // Find a better design to deal with this.
-                let phys_id_i = physics_store.lookup_component(&entity_i).unwrap();
-                let phys_id_j = physics_store.lookup_component(&entity_j).unwrap();
+                let transform_i = transforms.lookup(&entity_i)
+                                            .expect("All collision components must have a Transform component.")
+                                            .current;
+                let transform_j = transforms.lookup(&entity_j)
+                                            .expect("All collision components must have a Transform component.")
+                                            .current;
 
-                let pos_i = physics_store.lookup_position(&phys_id_i);
-                let pos_j = physics_store.lookup_position(&phys_id_j);
+                let pos_i = transform_i.position;
+                let pos_j = transform_j.position;
 
-                let orient_i = physics_store.lookup_orientation(&phys_id_i);
-                let orient_j = physics_store.lookup_orientation(&phys_id_j);
+                let orient_i = transform_i.orientation;
+                let orient_j = transform_j.orientation;
 
                 use physics::CollisionModel as Model;
                 let possible_contact = match (model_i, model_j) {
@@ -108,15 +110,17 @@ impl CollisionEngine {
 
     pub fn resolve_collisions(&self,
         physics_store: &mut PhysicsComponentStore,
+        transforms: &mut TransformStore,
         contacts: &ContactCollection)
     {
-        resolve_velocities(physics_store, contacts);
-        resolve_interpenetrations(physics_store, contacts);
+        resolve_velocities(physics_store, transforms, contacts);
+        resolve_interpenetrations(physics_store, transforms, contacts);
     }
 }
 
 fn resolve_velocities(
     physics_store: &mut PhysicsComponentStore,
+    transforms: &TransformStore,
     contacts: &ContactCollection)
 {
     for contact in contacts.contacts() {
@@ -137,17 +141,22 @@ fn resolve_velocities(
         let (entity1, entity2) = contact.objects;
         let physics1 = physics_store.lookup_component(&entity1);
         let physics2 = physics_store.lookup_component(&entity2);
-
-       if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
+        let transform1 = transforms.lookup(&entity1)
+                                   .expect("All Collision components must have a Transform component.")
+                                   .current;
+        let transform2 = transforms.lookup(&entity2)
+                                   .expect("All Collision components must have a Transform component.")
+                                   .current;
+        if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
             let mut view = physics_store.mutable_view();
-            let orientation1 = view.orientation[physics1];
-            let orientation2 = view.orientation[physics2];
+            let orientation1 = transform1.orientation;
+            let orientation2 = transform2.orientation;
             let v1 = view.velocity[physics1];
             let v2 = view.velocity[physics2];
             let m1 = view.mass[physics1];
             let m2 = view.mass[physics2];
-            let r1 = contact.data.point - view.position[physics1];
-            let r2 = contact.data.point - view.position[physics2];
+            let r1 = contact.data.point - transform1.position;
+            let r2 = contact.data.point - transform2.position;
             let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
             let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
             let w1 = i_inv1 * view.angular_momentum[physics1];
@@ -195,7 +204,8 @@ fn resolve_velocities(
 }
 
 fn resolve_interpenetrations(
-    physics_store: &mut PhysicsComponentStore,
+    physics_store: &PhysicsComponentStore,
+    transforms: &mut TransformStore,
     contacts: &ContactCollection)
 {
     for contact in contacts.contacts() {
@@ -203,7 +213,7 @@ fn resolve_interpenetrations(
         let physics1 = physics_store.lookup_component(&entity1);
         let physics2 = physics_store.lookup_component(&entity2);
         if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
-            let mut view = physics_store.mutable_view();
+            let view = physics_store.view();
             let m1 = view.mass[physics1];
             let m2 = view.mass[physics2];
             let total_mass = m1 + m2;
@@ -215,8 +225,18 @@ fn resolve_interpenetrations(
             let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
 
             // TODO: Implement -= for cgmath Point3?
-            view.position[physics1] += - obj1_move_dist * contact.data.normal;
-            view.position[physics2] += obj2_move_dist * contact.data.normal;
+            {
+                let ref mut position1 = transforms.lookup_mut(&entity1)
+                                                .expect("All Collision components must have a Transform component.")
+                                                .current.position;
+                *position1 += - obj1_move_dist * contact.data.normal;
+            }
+            {
+                let ref mut position2 = transforms.lookup_mut(&entity2)
+                                              .expect("All Collision components must have a Transform component.")
+                                              .current.position;
+                *position2 += obj2_move_dist * contact.data.normal;
+            }
         }
     }
 }

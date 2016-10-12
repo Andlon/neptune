@@ -1,11 +1,11 @@
 use glium::{Surface, VertexBuffer, IndexBuffer};
 use glium;
-use cgmath::*;
 use camera::Camera;
 use render::*;
 use std::collections::HashMap;
 use entity::Entity;
-use cgmath;
+use core::{TransformStore};
+use cgmath::{Vector4, InnerSpace, Point3, Vector3};
 
 fn perspective_matrix<S: Surface>(surface: &S) -> [[f32; 4]; 4] {
     // TODO: Move this into Camera, so that we can
@@ -61,9 +61,10 @@ impl SceneRenderer {
 
     pub fn render(&mut self,
         frame: &mut Frame,
+        frame_progress: f64,
         camera: Camera,
         renderable_store: &SceneRenderableStore,
-        transform_store: &SceneTransformStore)
+        transform_store: &TransformStore)
     {
         let surface = &mut frame.internal_frame;
         let params = glium::DrawParameters {
@@ -89,7 +90,19 @@ impl SceneRenderer {
 
         for (entity, renderable) in renderable_store.renderables().iter() {
             if let Some(transform) = transform_store.lookup(entity) {
-                let model: [[f32; 4]; 4] = transform.model_matrix().into();
+                let transform = transform.interpolate(frame_progress);
+                // TODO: Fix this ugly mess
+                let model: [[f64; 4]; 4] = transform.model_matrix().into();
+                let model = {
+                    let mut new_model: [[f32; 4]; 4] = [[0.0; 4]; 4];
+                    for i in 0 .. 4 {
+                        for j in 0 .. 4 {
+                            new_model[i][j] = model[i][j] as f32;
+                        }
+                    }
+                    new_model
+                };
+
                 let uniforms = uniform! {
                     model: model,
                     view: view,
@@ -166,8 +179,8 @@ impl RenderVertex {
     }
 }
 
-impl<'a> From<&'a cgmath::Point3<f32>> for RenderVertex {
-    fn from(point: &'a cgmath::Point3<f32>) -> Self {
+impl<'a> From<&'a Point3<f32>> for RenderVertex {
+    fn from(point: &'a Point3<f32>) -> Self {
         RenderVertex { pos: [ point.x, point.y, point.z ]}
     }
 }
@@ -181,8 +194,8 @@ impl RenderNormal {
     }
 }
 
-impl<'a> From<&'a cgmath::Vector3<f32>> for RenderNormal {
-    fn from(vector: &'a cgmath::Vector3<f32>) -> Self {
+impl<'a> From<&'a Vector3<f32>> for RenderNormal {
+    fn from(vector: &'a Vector3<f32>) -> Self {
         RenderNormal { normal: [ vector.x, vector.y, vector.z ]}
     }
 }

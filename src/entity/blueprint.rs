@@ -1,11 +1,12 @@
 use ::physics::{PhysicsComponent, CollisionModel};
-use ::render::{SceneRenderable, SceneTransform};
+use ::render::{SceneRenderable};
+use ::core::Transform;
 
 pub struct EntityBlueprint {
     pub physics: Option<PhysicsComponent>,
     pub collision: Option<CollisionModel>,
     pub renderable: Option<SceneRenderable>,
-    pub transform: Option<SceneTransform>
+    pub transform: Option<Transform>
 }
 
 impl EntityBlueprint {

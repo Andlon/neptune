@@ -11,6 +11,7 @@ extern crate approx;
 
 extern crate ordered_float;
 
+mod core;
 mod entity;
 mod engine;
 mod render;
@@ -252,7 +253,7 @@ impl Initializer {
     }
 
     fn create_scene1(&self) -> SceneBlueprint {
-        let camera = Camera::look_in(Point3::new(20.0, 0.0, 5.0), -Vector3::unit_x(), Vector3::unit_z())
+        let camera = Camera::look_in(Point3::new(5.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z())
                             .unwrap();
 
         let red = Color::rgb(1.0, 0.0, 0.0);
@@ -262,18 +263,18 @@ impl Initializer {
 
         let blueprints = vec![
             CuboidObject::default()
-                         .center(Point3::new(2.5, 0.0, 10.0))
-                         .velocity(Vector3::new(-0.1, 0.0, -1.5))
-                         .mass(1.0)
-                         .orientation(Quaternion::from_axis_angle(Vector3::unit_y() + Vector3::unit_x(), Rad(0.8)))
-                         .color(graybrown)
+                         .center(Point3::new(0.0, 0.0, -5.0))
+                         .half_size(Vector3::new(5.0, 5.0, 5.0))
+                         .mass(1e10)
+                         .color(red)
                          .create_blueprint(),
 
             CuboidObject::default()
-                         .center(Point3::new(0.0, 0.0, -1.0))
-                         .half_size(Vector3::new(5.0, 5.0, 5.0))
-                         .mass(1e11)
-                         .color(red)
+                         .center(Point3::new(2.5, 0.0, 2.0))
+                         .velocity(Vector3::new(-0.1, 0.0, 0.0))
+                         .mass(1.0)
+                         .orientation(Quaternion::from_axis_angle(Vector3::unit_y() + Vector3::unit_x(), Rad(0.8)))
+                         .color(graybrown)
                          .create_blueprint()
         ];
 
