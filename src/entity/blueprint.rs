@@ -18,4 +18,11 @@ impl EntityBlueprint {
             transform: None
         }
     }
+
+    /// Turns the blueprint into a blueprint for a static object, effectively
+    /// removing the physics component.
+    pub fn make_static(mut self) -> Self {
+        self.physics = None;
+        self
+    }
 }

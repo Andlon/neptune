@@ -267,7 +267,8 @@ impl Initializer {
                          .half_size(Vector3::new(5.0, 5.0, 5.0))
                          .mass(1e10)
                          .color(red)
-                         .create_blueprint(),
+                         .create_blueprint()
+                         .make_static(),
 
             CuboidObject::default()
                          .center(Point3::new(2.5, 0.0, 2.0))
