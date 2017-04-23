@@ -1,7 +1,6 @@
 use physics::*;
 use geometry::{Sphere, Cuboid};
-//use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix, EuclideanSpace};
-use nalgebra::{Matrix3, Quaternion, UnitQuaternion};
+use nalgebra::{Matrix3, UnitQuaternion};
 use core::{TransformStore};
 use cgmath::{InnerSpace, EuclideanSpace};
 use interop;

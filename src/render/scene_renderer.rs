@@ -162,8 +162,7 @@ impl SceneRenderer {
                             normals: normal_buffer,
                             indices: index_buffer
                         });
-                    },
-                    _ => ()
+                    }
                 }
             }
         }

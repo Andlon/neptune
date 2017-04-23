@@ -1,16 +1,13 @@
 #[macro_use]
 extern crate glium;
-#[macro_use]
 extern crate cgmath;
 extern crate time;
-#[macro_use]
 extern crate itertools;
 
 extern crate nalgebra;
 
 extern crate num;
 
-#[macro_use]
 extern crate approx;
 
 extern crate ordered_float;

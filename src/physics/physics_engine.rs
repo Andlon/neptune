@@ -1,5 +1,5 @@
 use physics::PhysicsComponentStore;
-use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Matrix, Quaternion, UnitQuaternion};
+use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Quaternion, UnitQuaternion};
 use core::{TransformPair, TransformStore};
 use interop;
 

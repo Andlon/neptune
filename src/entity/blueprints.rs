@@ -2,7 +2,7 @@ use ::entity::EntityBlueprint;
 use render::{unit_sphere_renderable, box_renderable};
 use geometry::{Sphere, Cuboid};
 use physics::{PhysicsComponent, CollisionModel};
-use cgmath::{SquareMatrix, EuclideanSpace, Matrix3, Point3, Vector3, Quaternion};
+use cgmath::{EuclideanSpace, Point3, Vector3, Quaternion};
 use core::Transform;
 use nalgebra;
 

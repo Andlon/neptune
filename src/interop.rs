@@ -1,13 +1,5 @@
 use cgmath;
 use nalgebra;
-use std;
-
-pub fn nalgebra_vector3_to_cgmath<T>(v: &nalgebra::Vector3<T>)
-    -> cgmath::Vector3<T>
-    where T: nalgebra::Scalar
-{
-    cgmath::Vector3::new(v[0], v[1], v[2])
-}
 
 pub fn cgmath_vector3_to_nalgebra<T>(v: &cgmath::Vector3<T>)
     -> nalgebra::Vector3<T>

@@ -3,7 +3,6 @@ use entity::Entity;
 use std::collections::HashMap;
 use cgmath::{Point3, Vector3};
 use render::Color;
-use geometry::{Sphere, Cuboid};
 
 pub struct MeshRenderable {
     pub vertices: Vec<Point3<f32>>,
@@ -13,8 +12,9 @@ pub struct MeshRenderable {
 
 pub enum RenderData {
     Mesh(MeshRenderable),
-    Sphere(Sphere<f32>),
-    Cuboid(Cuboid<f32>)
+    // Commented out because they are currently not used
+    // Sphere(Sphere<f32>),
+    // Cuboid(Cuboid<f32>)
 }
 
 pub struct SceneRenderable {
