@@ -7,7 +7,6 @@ extern crate time;
 extern crate itertools;
 
 extern crate nalgebra;
-extern crate ncollide;
 
 extern crate num;
 
