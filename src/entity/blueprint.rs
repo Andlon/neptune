@@ -1,9 +1,9 @@
-use ::physics::{PhysicsComponent, CollisionModel};
+use ::physics::{RigidBody, CollisionModel};
 use ::render::{SceneRenderable};
 use ::core::Transform;
 
 pub struct EntityBlueprint {
-    pub physics: Option<PhysicsComponent>,
+    pub rigid_body: Option<RigidBody>,
     pub collision: Option<CollisionModel>,
     pub renderable: Option<SceneRenderable>,
     pub transform: Option<Transform>
@@ -12,7 +12,7 @@ pub struct EntityBlueprint {
 impl EntityBlueprint {
     pub fn empty() -> Self {
         EntityBlueprint {
-            physics: None,
+            rigid_body: None,
             collision: None,
             renderable: None,
             transform: None
@@ -20,9 +20,9 @@ impl EntityBlueprint {
     }
 
     /// Turns the blueprint into a blueprint for a static object, effectively
-    /// removing the physics component.
+    /// removing the rigid body component.
     pub fn make_static(mut self) -> Self {
-        self.physics = None;
+        self.rigid_body = None;
         self
     }
 }

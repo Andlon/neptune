@@ -1,9 +1,8 @@
 mod physics_component;
 pub use self::physics_component::{
-    PhysicsComponentStore,
-    PhysicsComponent,
-    PhysicsComponentsView,
-    MutablePhysicsComponentsView
+    Mass,
+    RigidBodyState,
+    RigidBody
 };
 
 mod physics_engine;

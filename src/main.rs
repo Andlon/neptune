@@ -2,6 +2,8 @@
 extern crate glium;
 extern crate cgmath;
 extern crate time;
+
+#[macro_use]
 extern crate itertools;
 
 extern crate nalgebra;
@@ -122,7 +124,9 @@ impl SphereObject {
         };
         let mut blueprint = blueprints::sphere(sphere, self.mass, self.subdivisions);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.physics.as_mut().unwrap().velocity =
+        blueprint.rigid_body.as_mut().unwrap().state.velocity =
+            interop::cgmath_vector3_to_nalgebra(&self.velocity);
+        blueprint.rigid_body.as_mut().unwrap().prev_state.velocity =
             interop::cgmath_vector3_to_nalgebra(&self.velocity);
         blueprint
     }
@@ -182,7 +186,9 @@ impl CuboidObject {
 
         let mut blueprint = blueprints::cuboid(cuboid, self.mass);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.physics.as_mut().unwrap().velocity =
+        blueprint.rigid_body.as_mut().unwrap().state.velocity =
+            interop::cgmath_vector3_to_nalgebra(&self.velocity);
+        blueprint.rigid_body.as_mut().unwrap().prev_state.velocity =
             interop::cgmath_vector3_to_nalgebra(&self.velocity);
         blueprint
     }

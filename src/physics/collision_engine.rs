@@ -4,6 +4,7 @@ use nalgebra::{Matrix3, UnitQuaternion};
 use core::{TransformStore};
 use cgmath::{InnerSpace, EuclideanSpace};
 use interop;
+use entity::LinearComponentStorage;
 
 pub struct CollisionEngine;
 
@@ -111,17 +112,17 @@ impl CollisionEngine {
     }
 
     pub fn resolve_collisions(&self,
-        physics_store: &mut PhysicsComponentStore,
+        bodies: &mut LinearComponentStorage<RigidBody>,
         transforms: &mut TransformStore,
         contacts: &ContactCollection)
     {
-        resolve_velocities(physics_store, transforms, contacts);
-        resolve_interpenetrations(physics_store, transforms, contacts);
+        resolve_velocities(bodies, transforms, contacts);
+        resolve_interpenetrations(bodies, transforms, contacts);
     }
 }
 
 fn resolve_velocities(
-    physics_store: &mut PhysicsComponentStore,
+    bodies: &mut LinearComponentStorage<RigidBody>,
     transforms: &TransformStore,
     contacts: &ContactCollection)
 {
@@ -141,30 +142,31 @@ fn resolve_velocities(
         // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
 
         let (entity1, entity2) = contact.objects;
-        let physics1 = physics_store.lookup_component(&entity1);
-        let physics2 = physics_store.lookup_component(&entity2);
+        let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
+        let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
         let transform1 = transforms.lookup(&entity1)
                                    .expect("All Collision components must have a Transform component.")
                                    .current;
         let transform2 = transforms.lookup(&entity2)
                                    .expect("All Collision components must have a Transform component.")
                                    .current;
-        if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
-            let mut view = physics_store.mutable_view();
-            let orientation1 = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&transform1.orientation));
-            let orientation2 = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&transform2.orientation));
-            let v1 = view.velocity[physics1];
-            let v2 = view.velocity[physics2];
-            let m1 = view.mass[physics1];
-            let m2 = view.mass[physics2];
+        if let (Some(mut rb1), Some(mut rb2)) = (rb1, rb2) {
+            let orientation1 = UnitQuaternion::new_normalize(
+                interop::cgmath_quat_to_nalgebra(&transform1.orientation));
+            let orientation2 = UnitQuaternion::new_normalize(
+                interop::cgmath_quat_to_nalgebra(&transform2.orientation));
+            let v1 = rb1.state.velocity;
+            let v2 = rb2.state.velocity;
+            let m1 = rb1.mass.value();
+            let m2 = rb2.mass.value();
             let r1 = contact.data.point - transform1.position;
             let r2 = contact.data.point - transform2.position;
             let r1 = interop::cgmath_vector3_to_nalgebra(&r1);
             let r2 = interop::cgmath_vector3_to_nalgebra(&r2);
-            let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
-            let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
-            let w1 = i_inv1 * view.angular_momentum[physics1];
-            let w2 = i_inv2 * view.angular_momentum[physics2];
+            let i_inv1 = world_inverse_inertia(&rb1.inv_inertia_body, orientation1);
+            let i_inv2 = world_inverse_inertia(&rb2.inv_inertia_body, orientation2);
+            let w1 = i_inv1 * rb1.state.angular_momentum;
+            let w2 = i_inv2 * rb2.state.angular_momentum;
             let v_p1 = v1 + w1.cross(&r1);
             let v_p2 = v2 + w1.cross(&r2);
 
@@ -197,31 +199,33 @@ fn resolve_velocities(
                 let v2_post = v2 + j_r / m2 * n;
                 let w1_post = w1 - j_r * i_inv1 * r1.cross(&n);
                 let w2_post = w2 + j_r * i_inv2 * r2.cross(&n);
-                view.velocity[physics1] = v1_post;
-                view.velocity[physics2] = v2_post;
+                rb1.state.velocity = v1_post;
+                rb2.state.velocity = v2_post;
 
                 // TODO: Avoid the inversions here
                 use interop::try_3x3_inverse;
-                view.angular_momentum[physics1] = try_3x3_inverse(i_inv1).unwrap() * w1_post;
-                view.angular_momentum[physics2] = try_3x3_inverse(i_inv2).unwrap() * w2_post;
+                rb1.state.angular_momentum = try_3x3_inverse(i_inv1).unwrap() * w1_post;
+                rb2.state.angular_momentum = try_3x3_inverse(i_inv2).unwrap() * w2_post;
             }
+
+            bodies.set_component_for_entity(entity1, rb1);
+            bodies.set_component_for_entity(entity2, rb2);
         }
     }
 }
 
 fn resolve_interpenetrations(
-    physics_store: &PhysicsComponentStore,
+    bodies: &mut LinearComponentStorage<RigidBody>,
     transforms: &mut TransformStore,
     contacts: &ContactCollection)
 {
     for contact in contacts.contacts() {
         let (entity1, entity2) = contact.objects;
-        let physics1 = physics_store.lookup_component(&entity1);
-        let physics2 = physics_store.lookup_component(&entity2);
-        if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
-            let view = physics_store.view();
-            let m1 = view.mass[physics1];
-            let m2 = view.mass[physics2];
+        let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
+        let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
+        if let (Some(mut rb1), Some(mut rb2)) = (rb1, rb2) {
+            let m1 = rb1.mass.value();
+            let m2 = rb2.mass.value();
             let total_mass = m1 + m2;
 
             // Move the two objects linearly away from each other along the contact normal.
@@ -230,19 +234,28 @@ fn resolve_interpenetrations(
             let obj1_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
             let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
 
-            // TODO: Implement -= for cgmath Point3?
+            rb1.state.position -= interop::cgmath_vector3_to_nalgebra(
+                    &(obj1_move_dist * contact.data.normal));
+            rb2.state.position += interop::cgmath_vector3_to_nalgebra(
+                    &(obj2_move_dist * contact.data.normal));
+
+            // We update the transforms as well here,
+            // but this is a stop-gap solution. In fact, we'd
+            // like to remove transforms altogether.
             {
-                let ref mut position1 = transforms.lookup_mut(&entity1)
-                                                .expect("All Collision components must have a Transform component.")
-                                                .current.position;
-                *position1 += - obj1_move_dist * contact.data.normal;
+                let t1 = transforms.lookup_mut(&entity1).expect("Temporary hack");
+                t1.current.position = interop::nalgebra_point3_to_cgmath(
+                    &rb1.state.position);
             }
+
             {
-                let ref mut position2 = transforms.lookup_mut(&entity2)
-                                              .expect("All Collision components must have a Transform component.")
-                                              .current.position;
-                *position2 += obj2_move_dist * contact.data.normal;
+                let t2 = transforms.lookup_mut(&entity2).expect("Temporary hack");
+                t2.current.position = interop::nalgebra_point3_to_cgmath(
+                    &rb2.state.position);
             }
+
+            bodies.set_component_for_entity(entity1, rb1);
+            bodies.set_component_for_entity(entity2, rb2);
         }
     }
 }

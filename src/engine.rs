@@ -1,7 +1,7 @@
-use entity::{EntityManager, EntityBlueprint, Entity};
+use entity::{EntityManager, EntityBlueprint, Entity, LinearComponentStorage};
 use render::*;
 use physics::{PhysicsEngine, CollisionComponentStore,
-    PhysicsComponentStore, CollisionEngine, ContactCollection};
+    CollisionEngine, ContactCollection, RigidBody};
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -20,7 +20,7 @@ pub struct Engine<Initializer: SceneInitializer> {
 struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: TransformStore,
-    pub physics: PhysicsComponentStore,
+    pub rigid_bodies: LinearComponentStorage<RigidBody>,
     pub collision: CollisionComponentStore,
     pub camera: Camera
 }
@@ -47,8 +47,8 @@ impl Systems {
 
 impl ComponentStores {
     pub fn assemble_blueprint(&mut self, entity: Entity, blueprint: EntityBlueprint) {
-        if let Some(physics) = blueprint.physics {
-            self.physics.set_component_properties(entity, physics);
+        if let Some(rb) = blueprint.rigid_body {
+            self.rigid_bodies.set_component_for_entity(entity, rb);
         }
         if let Some(collision) = blueprint.collision {
             self.collision.set_component_model(entity, collision);
@@ -67,7 +67,7 @@ impl ComponentStores {
     pub fn clear(&mut self) {
         self.scene.clear();
         self.transform.clear();
-        self.physics.clear();
+        self.rigid_bodies.clear();
         self.collision.clear();
     }
 }
@@ -110,9 +110,9 @@ impl<I> Engine<I> where I: SceneInitializer {
             let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
-                self.systems.physics.simulate(TIMESTEP, &mut self.stores.physics, &mut self.stores.transform);
+                self.systems.physics.simulate(TIMESTEP, &mut self.stores.rigid_bodies, &mut self.stores.transform);
                 self.systems.collision.detect_collisions(&self.stores.transform, &self.stores.collision, &mut contacts);
-                self.systems.collision.resolve_collisions(&mut self.stores.physics, &mut self.stores.transform, &contacts);
+                self.systems.collision.resolve_collisions(&mut self.stores.rigid_bodies, &mut self.stores.transform, &contacts);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
@@ -169,7 +169,7 @@ fn prepare_component_stores() -> ComponentStores {
     ComponentStores {
         scene: SceneRenderableStore::new(),
         transform: TransformStore::new(),
-        physics: PhysicsComponentStore::new(),
+        rigid_bodies: LinearComponentStorage::new(),
         collision: CollisionComponentStore::new(),
         camera: Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap()
     }
