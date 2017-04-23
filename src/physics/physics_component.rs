@@ -1,4 +1,5 @@
-use cgmath::{Vector3, Zero, Matrix3, SquareMatrix};
+use nalgebra;
+use nalgebra::{Vector3, Matrix3};
 use std::collections::HashMap;
 use entity::Entity;
 
@@ -49,8 +50,8 @@ pub struct PhysicsComponent {
 impl Default for PhysicsComponent {
     fn default() -> Self {
         PhysicsComponent {
-            velocity: Vector3::zero(),
-            angular_velocity: Vector3::zero(),
+            velocity: nalgebra::zero::<Vector3<_>>(),
+            angular_velocity: nalgebra::zero::<Vector3<_>>(),
             mass: 0.0,
             inertia_body: Matrix3::identity()
         }
@@ -78,7 +79,8 @@ impl PhysicsComponentStore {
         // It's far more user friendly to let the user supply angular
         // velocity and inertia tensor instead of angular momentum
         // and the inverse inertia tensor.
-        let inv_inertia_body = component.inertia_body.invert().expect("Must be invertible. Replace with Result");
+        let inv_inertia_body = component.inertia_body.try_inverse()
+                                        .expect("Must be invertible. Replace with Result");
         let angular_momentum = component.inertia_body * component.angular_velocity;
 
         // Note that we set acceleration to zero, because it will be

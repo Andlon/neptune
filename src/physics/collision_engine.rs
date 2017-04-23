@@ -1,17 +1,20 @@
 use physics::*;
 use geometry::{Sphere, Cuboid};
-use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix, EuclideanSpace};
+//use cgmath::{InnerSpace, Matrix3, Quaternion, Matrix, SquareMatrix, EuclideanSpace};
+use nalgebra::{Matrix3, Quaternion, UnitQuaternion};
 use core::{TransformStore};
+use cgmath::{InnerSpace, EuclideanSpace};
+use interop;
 
 pub struct CollisionEngine;
 
 // As a quick hack, this is merely copy-pasted from physics_component.rs.
 // Need to find a better way to deal with this
-fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
+fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: UnitQuaternion<f64>)
     -> Matrix3<f64> {
-    let body_to_world = Matrix3::from(orientation);
-    let world_to_body = body_to_world.transpose();
-    body_to_world * local_inertia_inv * world_to_body
+    let body_to_world = orientation.to_rotation_matrix();
+    let world_to_body = orientation.inverse().to_rotation_matrix();
+    body_to_world * (local_inertia_inv * world_to_body)
 }
 
 impl CollisionEngine {
@@ -54,7 +57,7 @@ impl CollisionEngine {
                         let sphere_i = Sphere { radius: sphere1_model.radius, center: pos_i };
                         let sphere_j = Sphere { radius: sphere2_model.radius, center: pos_j };
                         contact_sphere_sphere(sphere_i, sphere_j)
-                            .map(|data| Contact { 
+                            .map(|data| Contact {
                                 objects: (entity_i, entity_j),
                                 data: data
                             })
@@ -149,30 +152,33 @@ fn resolve_velocities(
                                    .current;
         if let (Some(physics1), Some(physics2)) = (physics1, physics2) {
             let mut view = physics_store.mutable_view();
-            let orientation1 = transform1.orientation;
-            let orientation2 = transform2.orientation;
+            let orientation1 = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&transform1.orientation));
+            let orientation2 = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&transform2.orientation));
             let v1 = view.velocity[physics1];
             let v2 = view.velocity[physics2];
             let m1 = view.mass[physics1];
             let m2 = view.mass[physics2];
             let r1 = contact.data.point - transform1.position;
             let r2 = contact.data.point - transform2.position;
+            let r1 = interop::cgmath_vector3_to_nalgebra(&r1);
+            let r2 = interop::cgmath_vector3_to_nalgebra(&r2);
             let i_inv1 = world_inverse_inertia(&view.inv_inertia_body[physics1], orientation1);
             let i_inv2 = world_inverse_inertia(&view.inv_inertia_body[physics2], orientation2);
             let w1 = i_inv1 * view.angular_momentum[physics1];
             let w2 = i_inv2 * view.angular_momentum[physics2];
-            let v_p1 = v1 + w1.cross(r1);
-            let v_p2 = v2 + w1.cross(r2);
+            let v_p1 = v1 + w1.cross(&r1);
+            let v_p2 = v2 + w1.cross(&r2);
 
             // Let n denote the contact normal
             let n = contact.data.normal;
+            let n = interop::cgmath_vector3_to_nalgebra(&n);
 
             // Define the "relative velocity" at the point of impact
             let v_r = v_p2 - v_p1;
 
             // The separating velocity is the projection of the relative velocity
             // onto the contact normal.
-            let v_separating = v_r.dot(n);
+            let v_separating = v_r.dot(&n);
 
             // If v_separating is non-negative, the objects are not moving
             // towards each other, and we do not need to add any corrective impulse.
@@ -180,9 +186,9 @@ fn resolve_velocities(
                 // j_r denotes the relative (reaction) impulse
                 let j_r = {
                     let linear_denominator = 1.0 / m1 + 1.0 / m2;
-                    let angular_denominator1 = i_inv1 * r1.cross(n).cross(r1);
-                    let angular_denominator2 = i_inv2 * r2.cross(n).cross(r2);
-                    let angular_denominator = (angular_denominator1 + angular_denominator2).dot(n);
+                    let angular_denominator1 = i_inv1 * r1.cross(&n).cross(&r1);
+                    let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
+                    let angular_denominator = (angular_denominator1 + angular_denominator2).dot(&n);
                     let numerator = -(1.0 + restitution) * v_separating;
                     numerator / (linear_denominator + angular_denominator)
                 };
@@ -190,14 +196,15 @@ fn resolve_velocities(
                 // Compute post-collision velocities
                 let v1_post = v1 - j_r / m1 * n;
                 let v2_post = v2 + j_r / m2 * n;
-                let w1_post = w1 - j_r * i_inv1 * r1.cross(n);
-                let w2_post = w2 + j_r * i_inv2 * r2.cross(n);
+                let w1_post = w1 - j_r * i_inv1 * r1.cross(&n);
+                let w2_post = w2 + j_r * i_inv2 * r2.cross(&n);
                 view.velocity[physics1] = v1_post;
                 view.velocity[physics2] = v2_post;
 
                 // TODO: Avoid the inversions here
-                view.angular_momentum[physics1] = i_inv1.invert().unwrap() * w1_post;
-                view.angular_momentum[physics2] = i_inv2.invert().unwrap() * w2_post;
+                use interop::try_3x3_inverse;
+                view.angular_momentum[physics1] = try_3x3_inverse(i_inv1).unwrap() * w1_post;
+                view.angular_momentum[physics2] = try_3x3_inverse(i_inv2).unwrap() * w2_post;
             }
         }
     }

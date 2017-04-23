@@ -6,6 +6,11 @@ extern crate time;
 #[macro_use]
 extern crate itertools;
 
+extern crate nalgebra;
+extern crate ncollide;
+
+extern crate num;
+
 #[macro_use]
 extern crate approx;
 
@@ -21,6 +26,7 @@ mod geometry;
 mod message;
 mod camera;
 mod time_keeper;
+mod interop;
 
 use engine::Engine;
 
@@ -120,7 +126,8 @@ impl SphereObject {
         };
         let mut blueprint = blueprints::sphere(sphere, self.mass, self.subdivisions);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.physics.as_mut().unwrap().velocity = self.velocity;
+        blueprint.physics.as_mut().unwrap().velocity =
+            interop::cgmath_vector3_to_nalgebra(&self.velocity);
         blueprint
     }
 }
@@ -179,7 +186,8 @@ impl CuboidObject {
 
         let mut blueprint = blueprints::cuboid(cuboid, self.mass);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.physics.as_mut().unwrap().velocity = self.velocity;
+        blueprint.physics.as_mut().unwrap().velocity =
+            interop::cgmath_vector3_to_nalgebra(&self.velocity);
         blueprint
     }
 }

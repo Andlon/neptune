@@ -1,21 +1,22 @@
 use physics::PhysicsComponentStore;
-use cgmath::{Point3, Vector3, InnerSpace, Zero, Matrix3, Quaternion, Matrix, EuclideanSpace};
+use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Matrix, Quaternion, UnitQuaternion};
 use core::{TransformPair, TransformStore};
+use interop;
 
 pub struct PhysicsEngine {
     position: Vec<Point3<f64>>,
-    orientation: Vec<Quaternion<f64>>,
+    orientation: Vec<UnitQuaternion<f64>>,
     acceleration: Vec<Vector3<f64>>,
     prev_position: Vec<Point3<f64>>,
-    prev_orientation: Vec<Quaternion<f64>>,
+    prev_orientation: Vec<UnitQuaternion<f64>>,
     prev_acceleration: Vec<Vector3<f64>>
 }
 
-fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: Quaternion<f64>)
+fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: UnitQuaternion<f64>)
     -> Matrix3<f64> {
-    let body_to_world = Matrix3::from(orientation);
-    let world_to_body = body_to_world.transpose();
-    body_to_world * local_inertia_inv * world_to_body
+    let body_to_world = orientation.to_rotation_matrix();
+    let world_to_body = orientation.inverse().to_rotation_matrix();
+    body_to_world * (local_inertia_inv * world_to_body)
 }
 
 impl PhysicsEngine {
@@ -80,7 +81,7 @@ impl PhysicsEngine {
         // Update angular momentum
         for i in 0 .. num_components {
             // TODO: Implement torque accumulators
-            let torque = Vector3::zero();
+            let torque = zero::<Vector3<f64>>();
             view.angular_momentum[i] = view.angular_momentum[i] + dt * torque;
         }
 
@@ -91,9 +92,16 @@ impl PhysicsEngine {
             let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
             let angular_momentum = view.angular_momentum[i];
             let angular_velocity = inverse_world_inertia * angular_momentum;
-            let angular_velocity_quat = Quaternion::from_sv(0.0, angular_velocity);
+            let angular_velocity_quat = Quaternion::from_parts(0.0, angular_velocity);
+
+            // The orientation update first makes the quaternion non-unit.
+            // This means that we need to:
+            // 1. Turn the UnitQuaternion into Quaternion by unwrapping
+            // 2. Update the Quaternion instance
+            // 3. Normalize the updated Quaternion into a new UnitQuaternion
+            let orientation = orientation.unwrap();
             let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
-            self.orientation[i] = new_orientation.normalize();
+            self.orientation[i] = UnitQuaternion::new_normalize(new_orientation);
         }
     }
 
@@ -105,7 +113,7 @@ impl PhysicsEngine {
 
         // Reset the acceleration to zero before summation
         for accel in self.acceleration.iter_mut() {
-            *accel = Vector3::zero();
+            *accel = zero::<Vector3<f64>>();
         }
 
         const G: f64 = 6.674e-11;
@@ -116,7 +124,7 @@ impl PhysicsEngine {
                 let x_i = self.position[i];
                 let x_j = self.position[j];
                 let r = x_j - x_i;
-                let r2 = r.magnitude2();
+                let r2 = norm_squared(&r);
                 let f = G * m_i * m_j / r2;
                 self.acceleration[i] += (f / m_i) * r;
                 self.acceleration[j] += - (f / m_j) * r;
@@ -127,11 +135,11 @@ impl PhysicsEngine {
     fn update_buffers_from_transforms(&mut self, components: &PhysicsComponentStore, transforms: &TransformStore) {
         let num_components = components.num_components();
         self.position.resize(num_components, Point3::origin());
-        self.orientation.resize(num_components, Quaternion::new(1.0, 0.0, 0.0, 0.0));
-        self.acceleration.resize(num_components, Vector3::zero());
+        self.orientation.resize(num_components, UnitQuaternion::identity());
+        self.acceleration.resize(num_components, zero::<Vector3<f64>>());
         self.prev_position.resize(num_components, Point3::origin());
-        self.prev_orientation.resize(num_components, Quaternion::new(1.0, 0.0, 0.0, 0.0));
-        self.prev_acceleration.resize(num_components, Vector3::zero());
+        self.prev_orientation.resize(num_components, UnitQuaternion::identity());
+        self.prev_acceleration.resize(num_components, zero::<Vector3<f64>>());
 
         let view = components.view();
 
@@ -141,10 +149,10 @@ impl PhysicsEngine {
                                  .expect("All entities with a Physics component must have a Transform component!");
             let &TransformPair { current, prev } = pair;
 
-            self.position[i] = current.position;
-            self.orientation[i] = current.orientation;
-            self.prev_position[i] = prev.position;
-            self.prev_orientation[i] = prev.orientation;
+            self.position[i] = interop::cgmath_point3_to_nalgebra(&current.position);
+            self.orientation[i] = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&current.orientation));
+            self.prev_position[i] = interop::cgmath_point3_to_nalgebra(&prev.position);
+            self.prev_orientation[i] = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&prev.orientation));
         }
     }
 
@@ -168,10 +176,10 @@ impl PhysicsEngine {
             let entity = view.entity[i];
             let transform_pair = transforms.lookup_mut(&entity)
                                            .expect("Physics component is expected to have a transform component!");
-            transform_pair.current.position = self.position[i];
-            transform_pair.current.orientation = self.orientation[i];
-            transform_pair.prev.position = self.prev_position[i];
-            transform_pair.prev.orientation = self.prev_orientation[i];
+            transform_pair.current.position = interop::nalgebra_point3_to_cgmath(&self.position[i]);
+            transform_pair.current.orientation = interop::nalgebra_unit_quat_to_cgmath(&self.orientation[i]);
+            transform_pair.prev.position = interop::nalgebra_point3_to_cgmath(&self.prev_position[i]);
+            transform_pair.prev.orientation = interop::nalgebra_unit_quat_to_cgmath(&self.prev_orientation[i]);
         }
     }
 }
