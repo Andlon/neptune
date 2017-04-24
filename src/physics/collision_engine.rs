@@ -2,8 +2,6 @@ use physics::*;
 use nalgebra::{Matrix3, UnitQuaternion, Isometry3, Translation3};
 use ncollide::world::{CollisionWorld3, CollisionGroups, GeometricQueryType};
 use ncollide::shape::{ShapeHandle, Ball, Cuboid};
-use cgmath;
-use interop;
 use entity::{Entity, LinearComponentStorage};
 
 pub struct CollisionEngine {
@@ -53,14 +51,12 @@ impl CollisionEngine {
             if let Some(rb) = rb {
                 let (center, rotation) = match model {
                     &CollisionModel::Sphere(sphere) =>
-                        (sphere.center, cgmath::Quaternion::new(1.0, 0.0, 0.0, 0.0)),
+                        (sphere.center, UnitQuaternion::identity()),
                     &CollisionModel::Cuboid(cuboid) =>
                         (cuboid.center, cuboid.rotation)
                 };
-                let center = interop::cgmath_point3_to_nalgebra(&center);
                 let translation = Translation3::from_vector(center.coords + rb.state.position.coords);
-                let rotation = rb.state.orientation * UnitQuaternion::new_normalize(
-                    interop::cgmath_quat_to_nalgebra(&rotation));
+                let rotation = rb.state.orientation * rotation;
                 let position = Isometry3::from_parts(translation, rotation);
 
                 if self.world.collision_object(entity_uid).is_none() {
@@ -77,8 +73,6 @@ impl CollisionEngine {
                         },
                         &CollisionModel::Cuboid(cuboid) => {
                             let half_extents = cuboid.half_size;
-                            let half_extents =
-                                interop::cgmath_vector3_to_nalgebra(&half_extents);
                             let cuboid = Cuboid::new(half_extents);
                             self.world.deferred_add(entity_uid,
                                 position,

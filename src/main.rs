@@ -6,6 +6,7 @@ extern crate time;
 #[macro_use]
 extern crate itertools;
 
+extern crate alga;
 extern crate nalgebra;
 extern crate ncollide;
 
@@ -122,7 +123,7 @@ impl SphereObject {
 
     fn create_blueprint(self) -> EntityBlueprint {
         let sphere = Sphere {
-            center: self.center,
+            center: interop::cgmath_point3_to_nalgebra(&self.center),
             radius: self.radius
         };
         let mut blueprint = blueprints::sphere(sphere, self.mass, self.subdivisions);
@@ -182,9 +183,10 @@ impl CuboidObject {
 
     fn create_blueprint(self) -> EntityBlueprint {
         let cuboid = Cuboid {
-            center: self.center,
-            half_size: self.half_size,
-            rotation: self.orientation
+            center: interop::cgmath_point3_to_nalgebra(&self.center),
+            half_size: interop::cgmath_vector3_to_nalgebra(&self.half_size),
+            rotation: nalgebra::UnitQuaternion::new_normalize(
+                interop::cgmath_quat_to_nalgebra(&self.orientation))
         };
 
         let mut blueprint = blueprints::cuboid(cuboid, self.mass);

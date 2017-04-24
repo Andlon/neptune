@@ -2,7 +2,7 @@ use ::entity::EntityBlueprint;
 use render::{unit_sphere_renderable, box_renderable};
 use geometry::{Sphere, Cuboid};
 use physics::{Mass, RigidBody, RigidBodyState, CollisionModel};
-use cgmath::{EuclideanSpace, Point3, Vector3, Quaternion};
+use cgmath::{Vector3};
 use core::Transform;
 use nalgebra;
 use interop;
@@ -17,13 +17,17 @@ pub fn sphere(sphere: Sphere<f64>, mass: f64, num_subdivisions: u32) -> EntityBl
     let scale = Vector3::new(sphere.radius, sphere.radius, sphere.radius);
 
     let rb_state = RigidBodyState {
-        position: interop::cgmath_point3_to_nalgebra(&sphere.center),
+        position: sphere.center,
         .. RigidBodyState::default()
     };
 
+    // Temporary, for interop between cgmath and nalgebra types
+    let pos_cgmath = interop::nalgebra_point3_to_cgmath(&sphere.center);
+
     blueprint.renderable = Some(unit_sphere_renderable(num_subdivisions));
-    blueprint.transform = Some(Transform { position: sphere.center, scale: scale, .. Transform::default() });
-    blueprint.collision = Some(CollisionModel::Sphere(Sphere { center: Point3::origin(), .. sphere }));
+    blueprint.transform = Some(Transform { position: pos_cgmath, scale: scale, .. Transform::default() });
+    blueprint.collision = Some(CollisionModel::Sphere(
+        Sphere { center: nalgebra::Point3::origin(), .. sphere }));
     blueprint.rigid_body = Some(RigidBody {
         state: rb_state.clone(),
         prev_state: rb_state,
@@ -47,18 +51,17 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
                                 .expect("Provided inertia tensor must be invertible.");
 
     let rb_state = RigidBodyState {
-        position: interop::cgmath_point3_to_nalgebra(&cuboid.center),
-        orientation: nalgebra::UnitQuaternion::new_normalize(
-            interop::cgmath_quat_to_nalgebra(&cuboid.rotation)),
+        position: cuboid.center,
+        orientation: cuboid.rotation,
         .. RigidBodyState::default()
     };
 
     blueprint.renderable = Some(box_renderable(cuboid.half_size.x as f32, cuboid.half_size.y as f32, cuboid.half_size.z as f32));
     // Note: Ignore orientation in Cuboid and instead model that through the transform component
     blueprint.collision = Some(CollisionModel::Cuboid(Cuboid {
-        center: Point3::origin(),
+        center: nalgebra::Point3::origin(),
         half_size: cuboid.half_size,
-        rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
+        rotation: nalgebra::UnitQuaternion::identity()
     }));
     blueprint.rigid_body = Some(RigidBody {
         state: rb_state.clone(),
@@ -68,8 +71,8 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
         .. RigidBody::default()
     });
     blueprint.transform = Some(Transform {
-        position: cuboid.center,
-        orientation: cuboid.rotation,
+        position: interop::nalgebra_point3_to_cgmath(&cuboid.center),
+        orientation: interop::nalgebra_unit_quat_to_cgmath(&cuboid.rotation),
         .. Transform::default()
     });
 
