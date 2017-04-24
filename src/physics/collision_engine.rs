@@ -1,7 +1,7 @@
 use physics::*;
 use nalgebra::{Matrix3, UnitQuaternion, Isometry3, Translation3};
 use ncollide::world::{CollisionWorld3, CollisionGroups, GeometricQueryType};
-use ncollide::shape::{ShapeHandle, Ball, Cuboid};
+use ncollide::shape::{ShapeHandle3, Ball, Cuboid};
 use entity::{Entity, LinearComponentStorage};
 
 pub struct CollisionEngine {
@@ -48,6 +48,8 @@ impl CollisionEngine {
 
             let rb = bodies.lookup_component_for_entity(entity.clone());
 
+            // At the moment we only allow collisions between rigid bodies,
+            // so an associated rigid body component must belong to the entity
             if let Some(rb) = rb {
                 let (center, rotation) = match model {
                     &CollisionModel::Sphere(sphere) =>
@@ -59,29 +61,25 @@ impl CollisionEngine {
                 let rotation = rb.state.orientation * rotation;
                 let position = Isometry3::from_parts(translation, rotation);
 
-                if self.world.collision_object(entity_uid).is_none() {
-                    match model {
-                        &CollisionModel::Sphere(sphere) => {
+                let shape_handle = match model {
+                    &CollisionModel::Sphere(sphere) => {
                             let ball = Ball::new(sphere.radius);
-                            self.world.deferred_add(entity_uid,
-                                position,
-                                ShapeHandle::new(ball),
-                                CollisionGroups::new(),
-                                GeometricQueryType::Contacts(0.0),
-                                entity.clone());
-
+                            ShapeHandle3::new(ball)
                         },
                         &CollisionModel::Cuboid(cuboid) => {
                             let half_extents = cuboid.half_size;
                             let cuboid = Cuboid::new(half_extents);
-                            self.world.deferred_add(entity_uid,
-                                position,
-                                ShapeHandle::new(cuboid),
-                                CollisionGroups::new(),
-                                GeometricQueryType::Contacts(0.0),
-                                entity.clone());
+                            ShapeHandle3::new(cuboid)
                         }
-                    }
+                };
+
+                if self.world.collision_object(entity_uid).is_none() {
+                    self.world.deferred_add(entity_uid,
+                        position,
+                        shape_handle,
+                        CollisionGroups::new(),
+                        GeometricQueryType::Contacts(0.0),
+                        entity.clone());
                 } else {
                     self.world.deferred_set_position(entity_uid, position);
                 }
