@@ -18,11 +18,4 @@ impl EntityBlueprint {
             transform: None
         }
     }
-
-    /// Turns the blueprint into a blueprint for a static object, effectively
-    /// removing the rigid body component.
-    pub fn make_static(mut self) -> Self {
-        self.rigid_body = None;
-        self
-    }
 }
