@@ -10,6 +10,8 @@ extern crate nalgebra;
 
 extern crate num;
 
+#[cfg(test)]
+#[macro_use]
 extern crate approx;
 
 extern crate ordered_float;
