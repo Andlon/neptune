@@ -131,7 +131,7 @@ impl CollisionEngine {
                 let w1 = i_inv1 * rb1.state.angular_momentum;
                 let w2 = i_inv2 * rb2.state.angular_momentum;
                 let v_p1 = v1 + w1.cross(&r1);
-                let v_p2 = v2 + w1.cross(&r2);
+                let v_p2 = v2 + w2.cross(&r2);
 
                 // Let n denote the contact normal
                 let n = contact.normal;
