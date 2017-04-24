@@ -1,7 +1,7 @@
 use ::entity::EntityBlueprint;
 use render::{unit_sphere_renderable, box_renderable};
 use geometry::{Sphere, Cuboid};
-use physics::{Mass, RigidBody, RigidBodyState, CollisionModel};
+use physics::{Mass, RigidBody, DynamicRigidBody, DynamicBodyState, CollisionModel};
 use cgmath::{Vector3};
 use core::Transform;
 use nalgebra;
@@ -16,9 +16,9 @@ pub fn sphere(sphere: Sphere<f64>, mass: f64, num_subdivisions: u32) -> EntityBl
                                 .expect("Provided inertia tensor must be invertible.");
     let scale = Vector3::new(sphere.radius, sphere.radius, sphere.radius);
 
-    let rb_state = RigidBodyState {
+    let rb_state = DynamicBodyState {
         position: sphere.center,
-        .. RigidBodyState::default()
+        .. DynamicBodyState::default()
     };
 
     // Temporary, for interop between cgmath and nalgebra types
@@ -28,13 +28,13 @@ pub fn sphere(sphere: Sphere<f64>, mass: f64, num_subdivisions: u32) -> EntityBl
     blueprint.transform = Some(Transform { position: pos_cgmath, scale: scale, .. Transform::default() });
     blueprint.collision = Some(CollisionModel::Sphere(
         Sphere { center: nalgebra::Point3::origin(), .. sphere }));
-    blueprint.rigid_body = Some(RigidBody {
+    blueprint.rigid_body = Some(RigidBody::Dynamic(DynamicRigidBody {
         state: rb_state.clone(),
         prev_state: rb_state,
         inv_inertia_body: inv_inertia_tensor,
         mass: Mass::new(mass),
-        .. RigidBody::default()
-    });
+        .. DynamicRigidBody::default()
+    }));
 
     blueprint
 }
@@ -50,10 +50,10 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
     let inv_inertia_tensor = inertia_tensor.try_inverse()
                                 .expect("Provided inertia tensor must be invertible.");
 
-    let rb_state = RigidBodyState {
+    let rb_state = DynamicBodyState {
         position: cuboid.center,
         orientation: cuboid.rotation,
-        .. RigidBodyState::default()
+        .. DynamicBodyState::default()
     };
 
     blueprint.renderable = Some(box_renderable(cuboid.half_size.x as f32, cuboid.half_size.y as f32, cuboid.half_size.z as f32));
@@ -63,13 +63,13 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
         half_size: cuboid.half_size,
         rotation: nalgebra::UnitQuaternion::identity()
     }));
-    blueprint.rigid_body = Some(RigidBody {
+    blueprint.rigid_body = Some(RigidBody::Dynamic(DynamicRigidBody {
         state: rb_state.clone(),
         prev_state: rb_state,
         inv_inertia_body: inv_inertia_tensor,
         mass: Mass::new(mass),
-        .. RigidBody::default()
-    });
+        .. DynamicRigidBody::default()
+    }));
     blueprint.transform = Some(Transform {
         position: interop::nalgebra_point3_to_cgmath(&cuboid.center),
         orientation: interop::nalgebra_unit_quat_to_cgmath(&cuboid.rotation),

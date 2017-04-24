@@ -57,8 +57,8 @@ impl CollisionEngine {
                     &CollisionModel::Cuboid(cuboid) =>
                         (cuboid.center, cuboid.rotation)
                 };
-                let translation = Translation3::from_vector(center.coords + rb.state.position.coords);
-                let rotation = rb.state.orientation * rotation;
+                let translation = Translation3::from_vector(center.coords + rb.position().coords);
+                let rotation = rb.orientation() * rotation;
                 let position = Isometry3::from_parts(translation, rotation);
 
                 let shape_handle = match model {
@@ -117,7 +117,12 @@ impl CollisionEngine {
             let (entity1, entity2) = (obj1.data, obj2.data);
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
-            if let (Some(mut rb1), Some(mut rb2)) = (rb1, rb2) {
+
+            // Currently we only support dynamic-dynamic collisions.
+            // TODO: Support static-dynamic collisions (and ignore static-static)
+            if let (Some(RigidBody::Dynamic(mut rb1)), Some(RigidBody::Dynamic(mut rb2)))
+                = (rb1, rb2)
+            {
                 let orientation1 = rb1.state.orientation;
                 let orientation2 = rb2.state.orientation;
                 let v1 = rb1.state.velocity;
@@ -170,8 +175,8 @@ impl CollisionEngine {
                     rb2.state.angular_momentum = try_3x3_inverse(i_inv2).unwrap() * w2_post;
                 }
 
-                bodies.set_component_for_entity(entity1, rb1);
-                bodies.set_component_for_entity(entity2, rb2);
+                bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
+                bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
             }
         }
     }
@@ -183,7 +188,9 @@ impl CollisionEngine {
             let (entity1, entity2) = (obj1.data, obj2.data);
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
-            if let (Some(mut rb1), Some(mut rb2)) = (rb1, rb2) {
+            if let (Some(RigidBody::Dynamic(mut rb1)), Some(RigidBody::Dynamic(mut rb2)))
+                = (rb1, rb2)
+            {
                 let m1 = rb1.mass.value();
                 let m2 = rb2.mass.value();
                 let total_mass = m1 + m2;
@@ -197,8 +204,8 @@ impl CollisionEngine {
                 rb1.state.position -= obj1_move_dist * contact.normal;
                 rb2.state.position += obj2_move_dist * contact.normal;
 
-                bodies.set_component_for_entity(entity1, rb1);
-                bodies.set_component_for_entity(entity2, rb2);
+                bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
+                bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
             }
         }
     }

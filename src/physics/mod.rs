@@ -1,7 +1,9 @@
 mod physics_component;
 pub use self::physics_component::{
     Mass,
-    RigidBodyState,
+    DynamicBodyState,
+    StaticRigidBody,
+    DynamicRigidBody,
     RigidBody
 };
 

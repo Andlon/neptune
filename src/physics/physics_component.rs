@@ -27,7 +27,7 @@ impl Mass {
 }
 
 #[derive(Clone, Debug)]
-pub struct RigidBodyState {
+pub struct DynamicBodyState {
     pub position: Point3<f64>,
     pub orientation: UnitQuaternion<f64>,
     pub velocity: Vector3<f64>,
@@ -35,17 +35,37 @@ pub struct RigidBodyState {
     pub acceleration: Vector3<f64>
 }
 
+// #[derive(Clone, Debug)]
+// pub struct RigidBody {
+//     pub state: RigidBodyState,
+//     pub prev_state: RigidBodyState,
+//     pub mass: Mass,
+//     pub inv_inertia_body: Matrix3<f64>
+// }
+
 #[derive(Clone, Debug)]
-pub struct RigidBody {
-    pub state: RigidBodyState,
-    pub prev_state: RigidBodyState,
+pub struct StaticRigidBody {
+    position: Point3<f64>,
+    orientation: UnitQuaternion<f64>
+}
+
+#[derive(Clone, Debug)]
+pub struct DynamicRigidBody {
+    pub state: DynamicBodyState,
+    pub prev_state: DynamicBodyState,
     pub mass: Mass,
     pub inv_inertia_body: Matrix3<f64>
 }
 
-impl Default for RigidBodyState {
+#[derive(Clone, Debug)]
+pub enum RigidBody {
+    Static(StaticRigidBody),
+    Dynamic(DynamicRigidBody)
+}
+
+impl Default for DynamicBodyState {
     fn default() -> Self {
-        RigidBodyState {
+        DynamicBodyState {
             position: Point3::origin(),
             orientation: UnitQuaternion::identity(),
             velocity: nalgebra::zero::<Vector3<_>>(),
@@ -55,11 +75,27 @@ impl Default for RigidBodyState {
     }
 }
 
-impl Default for RigidBody {
+impl RigidBody {
+    pub fn position(&self) -> Point3<f64> {
+        match self {
+            &RigidBody::Static(ref rb) => { rb.position },
+            &RigidBody::Dynamic(ref rb) => { rb.state.position }
+        }
+    }
+
+    pub fn orientation(&self) -> UnitQuaternion<f64> {
+        match self {
+            &RigidBody::Static(ref rb) => { rb.orientation },
+            &RigidBody::Dynamic(ref rb) => { rb.state.orientation }
+        }
+    }
+}
+
+impl Default for DynamicRigidBody {
     fn default() -> Self {
-        RigidBody {
-            state: RigidBodyState::default(),
-            prev_state: RigidBodyState::default(),
+        DynamicRigidBody {
+            state: DynamicBodyState::default(),
+            prev_state: DynamicBodyState::default(),
             mass: Mass::zero(),
             inv_inertia_body: Matrix3::identity()
         }

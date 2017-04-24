@@ -39,6 +39,7 @@ use entity::blueprints;
 use camera::Camera;
 use render::Color;
 use engine::{SceneBlueprint, SceneInitializer};
+use physics::RigidBody;
 
 use cgmath::{Point3, Vector3, EuclideanSpace, Zero, Quaternion};
 use geometry::{Sphere, Cuboid};
@@ -128,10 +129,12 @@ impl SphereObject {
         };
         let mut blueprint = blueprints::sphere(sphere, self.mass, self.subdivisions);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.rigid_body.as_mut().unwrap().state.velocity =
-            interop::cgmath_vector3_to_nalgebra(&self.velocity);
-        blueprint.rigid_body.as_mut().unwrap().prev_state.velocity =
-            interop::cgmath_vector3_to_nalgebra(&self.velocity);
+
+        if let &mut RigidBody::Dynamic(ref mut rb) = blueprint.rigid_body.as_mut().unwrap() {
+            rb.state.velocity = interop::cgmath_vector3_to_nalgebra(&self.velocity);
+            rb.prev_state.velocity = interop::cgmath_vector3_to_nalgebra(&self.velocity);
+        }
+
         blueprint
     }
 }
@@ -191,10 +194,11 @@ impl CuboidObject {
 
         let mut blueprint = blueprints::cuboid(cuboid, self.mass);
         blueprint.renderable.as_mut().unwrap().color = self.color;
-        blueprint.rigid_body.as_mut().unwrap().state.velocity =
-            interop::cgmath_vector3_to_nalgebra(&self.velocity);
-        blueprint.rigid_body.as_mut().unwrap().prev_state.velocity =
-            interop::cgmath_vector3_to_nalgebra(&self.velocity);
+
+        if let &mut RigidBody::Dynamic(ref mut rb) = blueprint.rigid_body.as_mut().unwrap() {
+            rb.state.velocity = interop::cgmath_vector3_to_nalgebra(&self.velocity);
+            rb.prev_state.velocity = interop::cgmath_vector3_to_nalgebra(&self.velocity);
+        }
         blueprint
     }
 }

@@ -64,10 +64,15 @@ impl PhysicsEngine {
                          self.a.iter_mut(),
                          self.m.iter_mut());
         for (rb, x, v, a, m) in iter {
-            *x = rb.state.position;
-            *v = rb.state.velocity;
-            *a = rb.state.acceleration;
-            *m = rb.mass.value();
+            if let &RigidBody::Dynamic(ref rb) = rb {
+                *x = rb.state.position;
+                *v = rb.state.velocity;
+                *a = rb.state.acceleration;
+                *m = rb.mass.value();
+
+                // Static bodies are ignored, but at the moment
+                // they still occupy space in the buffers, which is a bit of a waste
+            }
         }
     }
 
@@ -89,16 +94,18 @@ impl PhysicsEngine {
                          self.a_next.iter(),
                          self.m.iter());
         for (rb, x, v, a_next, m) in iter {
-            rb.prev_state.position = rb.state.position;
-            rb.state.position = x.clone();
+            if let &mut RigidBody::Dynamic(ref mut rb) = rb {
+                rb.prev_state.position = rb.state.position;
+                rb.state.position = x.clone();
 
-            rb.prev_state.velocity = rb.state.velocity;
-            rb.state.velocity = v.clone();
+                rb.prev_state.velocity = rb.state.velocity;
+                rb.state.velocity = v.clone();
 
-            rb.prev_state.acceleration = rb.state.acceleration;
-            rb.state.acceleration = a_next.clone();
+                rb.prev_state.acceleration = rb.state.acceleration;
+                rb.state.acceleration = a_next.clone();
 
-            rb.mass = Mass::new(m.clone());
+                rb.mass = Mass::new(m.clone());
+            }
         }
     }
 
@@ -146,23 +153,25 @@ impl PhysicsEngine {
         // TODO: Implement torque accumulators
 
         for &mut (ref mut rb, _) in rigid_bodies.components_mut() {
-            rb.prev_state.orientation = rb.state.orientation;
+            if let &mut RigidBody::Dynamic(ref mut rb) = rb {
+                rb.prev_state.orientation = rb.state.orientation;
 
-            let orientation = rb.state.orientation;
-            let inv_inertia_body = rb.inv_inertia_body;
-            let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
-            let angular_momentum = rb.state.angular_momentum;
-            let angular_velocity = inverse_world_inertia * angular_momentum;
-            let angular_velocity_quat = Quaternion::from_parts(0.0, angular_velocity);
+                let orientation = rb.state.orientation;
+                let inv_inertia_body = rb.inv_inertia_body;
+                let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
+                let angular_momentum = rb.state.angular_momentum;
+                let angular_velocity = inverse_world_inertia * angular_momentum;
+                let angular_velocity_quat = Quaternion::from_parts(0.0, angular_velocity);
 
-            // The orientation update first makes the quaternion non-unit.
-            // This means that we need to:
-            // 1. Turn the UnitQuaternion into Quaternion by unwrapping
-            // 2. Update the Quaternion instance
-            // 3. Normalize the updated Quaternion into a new UnitQuaternion
-            let orientation = orientation.unwrap();
-            let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
-            rb.state.orientation = UnitQuaternion::new_normalize(new_orientation);
+                // The orientation update first makes the quaternion non-unit.
+                // This means that we need to:
+                // 1. Turn the UnitQuaternion into Quaternion by unwrapping
+                // 2. Update the Quaternion instance
+                // 3. Normalize the updated Quaternion into a new UnitQuaternion
+                let orientation = orientation.unwrap();
+                let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
+                rb.state.orientation = UnitQuaternion::new_normalize(new_orientation);
+            }
         }
     }
 

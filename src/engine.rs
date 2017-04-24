@@ -196,21 +196,24 @@ fn sync_transforms(bodies: &LinearComponentStorage<RigidBody>,
     // while SceneRenderables have interpolated positions, with
     // no common notion of Transform
     for &(ref rb, entity) in bodies.components() {
-        let old_pair = transforms.lookup(&entity)
-                                 .cloned()
-                                 .unwrap_or_default();
-        let new_pair = TransformPair {
-            prev: Transform {
-                position: interop::nalgebra_point3_to_cgmath(&rb.prev_state.position),
-                orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.prev_state.orientation),
-                .. old_pair.prev
-            },
-            current: Transform {
-                position: interop::nalgebra_point3_to_cgmath(&rb.state.position),
-                orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.state.orientation),
-                .. old_pair.current
-            }
-        };
-        transforms.set_transform(entity, new_pair);
+        if let &RigidBody::Dynamic(ref rb) = rb {
+            let old_pair = transforms.lookup(&entity)
+                                    .cloned()
+                                    .unwrap_or_default();
+            let new_pair = TransformPair {
+                prev: Transform {
+                    position: interop::nalgebra_point3_to_cgmath(&rb.prev_state.position),
+                    orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.prev_state.orientation),
+                    .. old_pair.prev
+                },
+                current: Transform {
+                    position: interop::nalgebra_point3_to_cgmath(&rb.state.position),
+                    orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.state.orientation),
+                    .. old_pair.current
+                }
+            };
+            transforms.set_transform(entity, new_pair);
+        }
+
     }
 }
