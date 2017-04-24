@@ -1,7 +1,5 @@
 use physics::{Mass, RigidBody};
 use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Quaternion, UnitQuaternion};
-use core::{TransformPair, TransformStore};
-use interop;
 use entity::LinearComponentStorage;
 
 pub struct PhysicsEngine {
@@ -33,16 +31,14 @@ impl PhysicsEngine {
 
     pub fn simulate(&mut self,
                     dt: f64,
-                    rigid_bodies: &mut LinearComponentStorage<RigidBody>,
-                    transforms: &mut TransformStore) {
+                    rigid_bodies: &mut LinearComponentStorage<RigidBody>)
+    {
         assert!(dt >= 0.0);
         // TODO: Eliminate transforms altogether
-        self.update_bodies_from_transforms(rigid_bodies, transforms);
         self.populate_buffers(rigid_bodies);
         self.integrate_linear_motion(dt);
         self.integrate_angular_motion(dt, rigid_bodies);
         self.sync_components_from_buffers(rigid_bodies);
-        self.update_transforms_from_bodies(rigid_bodies, transforms);
     }
 
     fn populate_buffers(&mut self, rigid_bodies: &LinearComponentStorage<RigidBody>)
@@ -187,44 +183,6 @@ impl PhysicsEngine {
                 self.a_next[i] += (f / m_i) * r;
                 self.a_next[j] += - (f / m_j) * r;
             }
-        }
-    }
-
-    fn update_bodies_from_transforms(&mut self,
-        bodies: &mut LinearComponentStorage<RigidBody>,
-        transforms: &TransformStore)
-    {
-        for &mut (ref mut rb, entity) in bodies.components_mut() {
-            let pair = transforms.lookup(&entity)
-                                 .expect("All entities with a Physics component must have a Transform component!");
-            let &TransformPair { current, prev } = pair;
-            rb.state.position = interop::cgmath_point3_to_nalgebra(&current.position);
-            rb.state.orientation = UnitQuaternion::new_normalize(interop::cgmath_quat_to_nalgebra(&current.orientation));
-            rb.prev_state.position = interop::cgmath_point3_to_nalgebra(&prev.position);
-            rb.prev_state.orientation = UnitQuaternion::new_normalize(
-                interop::cgmath_quat_to_nalgebra(&prev.orientation));
-        }
-    }
-
-    fn update_transforms_from_bodies(&self,
-        bodies: &LinearComponentStorage<RigidBody>,
-        transforms: &mut TransformStore)
-    {
-        debug_assert!(self.x.len() == self.v.len());
-        debug_assert!(self.v.len() == self.a.len());
-        debug_assert!(self.a.len() == self.a_next.len());
-
-        for &(ref rb, entity) in bodies.components() {
-            let transform_pair = transforms.lookup_mut(&entity)
-                                           .expect("Physics component is expected to have a transform component!");
-            transform_pair.current.position =
-                interop::nalgebra_point3_to_cgmath(&rb.state.position);
-            transform_pair.current.orientation =
-                interop::nalgebra_unit_quat_to_cgmath(&rb.state.orientation);
-            transform_pair.prev.position =
-                interop::nalgebra_point3_to_cgmath(&rb.prev_state.position);
-            transform_pair.prev.orientation =
-                interop::nalgebra_unit_quat_to_cgmath(&rb.prev_state.orientation);
         }
     }
 }

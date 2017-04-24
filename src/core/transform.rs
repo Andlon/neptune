@@ -30,9 +30,19 @@ impl Transform {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TransformPair {
     pub prev: Transform,
     pub current: Transform
+}
+
+impl Default for TransformPair {
+    fn default() -> Self {
+        TransformPair {
+            prev: Transform::default(),
+            current: Transform::default()
+        }
+    }
 }
 
 pub struct TransformStore {
@@ -76,5 +86,5 @@ impl TransformPair {
             orientation: interpolated_orientation,
             scale: interpolated_scale
         }
-    } 
+    }
 }

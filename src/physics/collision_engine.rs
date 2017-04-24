@@ -113,17 +113,15 @@ impl CollisionEngine {
 
     pub fn resolve_collisions(&self,
         bodies: &mut LinearComponentStorage<RigidBody>,
-        transforms: &mut TransformStore,
         contacts: &ContactCollection)
     {
-        resolve_velocities(bodies, transforms, contacts);
-        resolve_interpenetrations(bodies, transforms, contacts);
+        resolve_velocities(bodies, contacts);
+        resolve_interpenetrations(bodies, contacts);
     }
 }
 
 fn resolve_velocities(
     bodies: &mut LinearComponentStorage<RigidBody>,
-    transforms: &TransformStore,
     contacts: &ContactCollection)
 {
     for contact in contacts.contacts() {
@@ -141,28 +139,19 @@ fn resolve_velocities(
         // The mathematics here are based on the following Wikipedia article:
         // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
 
+        let contact_point = interop::cgmath_point3_to_nalgebra(&contact.data.point);
         let (entity1, entity2) = contact.objects;
         let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
         let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
-        let transform1 = transforms.lookup(&entity1)
-                                   .expect("All Collision components must have a Transform component.")
-                                   .current;
-        let transform2 = transforms.lookup(&entity2)
-                                   .expect("All Collision components must have a Transform component.")
-                                   .current;
         if let (Some(mut rb1), Some(mut rb2)) = (rb1, rb2) {
-            let orientation1 = UnitQuaternion::new_normalize(
-                interop::cgmath_quat_to_nalgebra(&transform1.orientation));
-            let orientation2 = UnitQuaternion::new_normalize(
-                interop::cgmath_quat_to_nalgebra(&transform2.orientation));
+            let orientation1 = rb1.state.orientation;
+            let orientation2 = rb2.state.orientation;
             let v1 = rb1.state.velocity;
             let v2 = rb2.state.velocity;
             let m1 = rb1.mass.value();
             let m2 = rb2.mass.value();
-            let r1 = contact.data.point - transform1.position;
-            let r2 = contact.data.point - transform2.position;
-            let r1 = interop::cgmath_vector3_to_nalgebra(&r1);
-            let r2 = interop::cgmath_vector3_to_nalgebra(&r2);
+            let r1 = contact_point - rb1.state.position;
+            let r2 = contact_point - rb2.state.position;
             let i_inv1 = world_inverse_inertia(&rb1.inv_inertia_body, orientation1);
             let i_inv2 = world_inverse_inertia(&rb2.inv_inertia_body, orientation2);
             let w1 = i_inv1 * rb1.state.angular_momentum;
@@ -216,10 +205,10 @@ fn resolve_velocities(
 
 fn resolve_interpenetrations(
     bodies: &mut LinearComponentStorage<RigidBody>,
-    transforms: &mut TransformStore,
     contacts: &ContactCollection)
 {
     for contact in contacts.contacts() {
+        let contact_normal = interop::cgmath_vector3_to_nalgebra(&contact.data.normal);
         let (entity1, entity2) = contact.objects;
         let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
         let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
@@ -234,25 +223,8 @@ fn resolve_interpenetrations(
             let obj1_move_dist = (m2 / total_mass) * contact.data.penetration_depth;
             let obj2_move_dist = (m1 / total_mass) * contact.data.penetration_depth;
 
-            rb1.state.position -= interop::cgmath_vector3_to_nalgebra(
-                    &(obj1_move_dist * contact.data.normal));
-            rb2.state.position += interop::cgmath_vector3_to_nalgebra(
-                    &(obj2_move_dist * contact.data.normal));
-
-            // We update the transforms as well here,
-            // but this is a stop-gap solution. In fact, we'd
-            // like to remove transforms altogether.
-            {
-                let t1 = transforms.lookup_mut(&entity1).expect("Temporary hack");
-                t1.current.position = interop::nalgebra_point3_to_cgmath(
-                    &rb1.state.position);
-            }
-
-            {
-                let t2 = transforms.lookup_mut(&entity2).expect("Temporary hack");
-                t2.current.position = interop::nalgebra_point3_to_cgmath(
-                    &rb2.state.position);
-            }
+            rb1.state.position -= obj1_move_dist * contact_normal;
+            rb2.state.position += obj2_move_dist * contact_normal;
 
             bodies.set_component_for_entity(entity1, rb1);
             bodies.set_component_for_entity(entity2, rb2);

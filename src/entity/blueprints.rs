@@ -1,10 +1,11 @@
 use ::entity::EntityBlueprint;
 use render::{unit_sphere_renderable, box_renderable};
 use geometry::{Sphere, Cuboid};
-use physics::{Mass, RigidBody, CollisionModel};
+use physics::{Mass, RigidBody, RigidBodyState, CollisionModel};
 use cgmath::{EuclideanSpace, Point3, Vector3, Quaternion};
 use core::Transform;
 use nalgebra;
+use interop;
 
 /// A blueprint of a sphere with zero velocity.
 pub fn sphere(sphere: Sphere<f64>, mass: f64, num_subdivisions: u32) -> EntityBlueprint {
@@ -15,10 +16,17 @@ pub fn sphere(sphere: Sphere<f64>, mass: f64, num_subdivisions: u32) -> EntityBl
                                 .expect("Provided inertia tensor must be invertible.");
     let scale = Vector3::new(sphere.radius, sphere.radius, sphere.radius);
 
+    let rb_state = RigidBodyState {
+        position: interop::cgmath_point3_to_nalgebra(&sphere.center),
+        .. RigidBodyState::default()
+    };
+
     blueprint.renderable = Some(unit_sphere_renderable(num_subdivisions));
     blueprint.transform = Some(Transform { position: sphere.center, scale: scale, .. Transform::default() });
     blueprint.collision = Some(CollisionModel::Sphere(Sphere { center: Point3::origin(), .. sphere }));
     blueprint.rigid_body = Some(RigidBody {
+        state: rb_state.clone(),
+        prev_state: rb_state,
         inv_inertia_body: inv_inertia_tensor,
         mass: Mass::new(mass),
         .. RigidBody::default()
@@ -38,6 +46,13 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
     let inv_inertia_tensor = inertia_tensor.try_inverse()
                                 .expect("Provided inertia tensor must be invertible.");
 
+    let rb_state = RigidBodyState {
+        position: interop::cgmath_point3_to_nalgebra(&cuboid.center),
+        orientation: nalgebra::UnitQuaternion::new_normalize(
+            interop::cgmath_quat_to_nalgebra(&cuboid.rotation)),
+        .. RigidBodyState::default()
+    };
+
     blueprint.renderable = Some(box_renderable(cuboid.half_size.x as f32, cuboid.half_size.y as f32, cuboid.half_size.z as f32));
     // Note: Ignore orientation in Cuboid and instead model that through the transform component
     blueprint.collision = Some(CollisionModel::Cuboid(Cuboid {
@@ -46,6 +61,8 @@ pub fn cuboid(cuboid: Cuboid<f64>, mass: f64) -> EntityBlueprint {
         rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0)
     }));
     blueprint.rigid_body = Some(RigidBody {
+        state: rb_state.clone(),
+        prev_state: rb_state,
         inv_inertia_body: inv_inertia_tensor,
         mass: Mass::new(mass),
         .. RigidBody::default()

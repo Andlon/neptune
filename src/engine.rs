@@ -6,8 +6,9 @@ use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
 use time_keeper::TimeKeeper;
-use core::{TransformPair, TransformStore};
+use core::{Transform, TransformPair, TransformStore};
 use std;
+use interop;
 
 pub struct Engine<Initializer: SceneInitializer> {
     initializer: Initializer,
@@ -110,9 +111,13 @@ impl<I> Engine<I> where I: SceneInitializer {
             let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
-                self.systems.physics.simulate(TIMESTEP, &mut self.stores.rigid_bodies, &mut self.stores.transform);
+                // Note: syncing transforms twice here is a stopgap solution
+                // during refactoring.
+                self.systems.physics.simulate(TIMESTEP, &mut self.stores.rigid_bodies);
+                sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
                 self.systems.collision.detect_collisions(&self.stores.transform, &self.stores.collision, &mut contacts);
-                self.systems.collision.resolve_collisions(&mut self.stores.rigid_bodies, &mut self.stores.transform, &contacts);
+                self.systems.collision.resolve_collisions(&mut self.stores.rigid_bodies, &contacts);
+                sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
             }
 
             let progress = time_keeper.accumulated() / TIMESTEP;
@@ -183,5 +188,33 @@ fn reassemble_scene(entity_manager: &mut EntityManager,
     stores.clear();
     for blueprint in scene.blueprints {
         stores.assemble_blueprint(entity_manager.create(), blueprint);
+    }
+}
+
+fn sync_transforms(bodies: &LinearComponentStorage<RigidBody>,
+                   transforms: &mut TransformStore)
+{
+    // For now, we require every physics object to also have a transform.
+    // In the future we should remove the concept of Transform altogether,
+    // and instead just let physics objects have discretized positions,
+    // while SceneRenderables have interpolated positions, with
+    // no common notion of Transform
+    for &(ref rb, entity) in bodies.components() {
+        let old_pair = transforms.lookup(&entity)
+                                 .cloned()
+                                 .unwrap_or_default();
+        let new_pair = TransformPair {
+            prev: Transform {
+                position: interop::nalgebra_point3_to_cgmath(&rb.prev_state.position),
+                orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.prev_state.orientation),
+                .. old_pair.prev
+            },
+            current: Transform {
+                position: interop::nalgebra_point3_to_cgmath(&rb.state.position),
+                orientation: interop::nalgebra_unit_quat_to_cgmath(&rb.state.orientation),
+                .. old_pair.current
+            }
+        };
+        transforms.set_transform(entity, new_pair);
     }
 }
