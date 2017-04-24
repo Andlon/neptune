@@ -1,7 +1,6 @@
 use physics::*;
 use geometry::{Sphere, Cuboid};
 use nalgebra::{Matrix3, UnitQuaternion};
-use core::{TransformStore};
 use cgmath::{InnerSpace, EuclideanSpace};
 use interop;
 use entity::LinearComponentStorage;
@@ -23,7 +22,7 @@ impl CollisionEngine {
     }
 
     pub fn detect_collisions(&self,
-        transforms: &TransformStore,
+        rigid_bodies: &LinearComponentStorage<RigidBody>,
         collision_store: &CollisionComponentStore,
         contacts: &mut ContactCollection)
     {
@@ -32,80 +31,79 @@ impl CollisionEngine {
             for j in (i + 1) .. collision_store.num_components() {
                 let entity_i = collision_store.entities()[i];
                 let entity_j = collision_store.entities()[j];
+                let rb_i = rigid_bodies.lookup_component_for_entity(entity_i);
+                let rb_j = rigid_bodies.lookup_component_for_entity(entity_j);
 
-                let model_i = collision_store.models()[i];
-                let model_j = collision_store.models()[j];
+                // Note: At the moment we will only detect collisions between
+                // rigid bodies.
+                if let (Some(rb_i), Some(rb_j)) = (rb_i, rb_j) {
+                    let model_i = collision_store.models()[i];
+                    let model_j = collision_store.models()[j];
 
-                let transform_i = transforms.lookup(&entity_i)
-                                            .expect("All collision components must have a Transform component.")
-                                            .current;
-                let transform_j = transforms.lookup(&entity_j)
-                                            .expect("All collision components must have a Transform component.")
-                                            .current;
+                    let pos_i = interop::nalgebra_point3_to_cgmath(&rb_i.state.position);
+                    let pos_j = interop::nalgebra_point3_to_cgmath(&rb_j.state.position);
 
-                let pos_i = transform_i.position;
-                let pos_j = transform_j.position;
+                    let orient_i = interop::nalgebra_unit_quat_to_cgmath(&rb_i.state.orientation);
+                    let orient_j = interop::nalgebra_unit_quat_to_cgmath(&rb_j.state.orientation);
 
-                let orient_i = transform_i.orientation;
-                let orient_j = transform_j.orientation;
+                    use physics::CollisionModel as Model;
+                    let possible_contact = match (model_i, model_j) {
+                        // Sphere-sphere
+                        (Model::Sphere(sphere1_model), Model::Sphere(sphere2_model))
+                        => {
+                            let sphere_i = Sphere { radius: sphere1_model.radius, center: pos_i };
+                            let sphere_j = Sphere { radius: sphere2_model.radius, center: pos_j };
+                            contact_sphere_sphere(sphere_i, sphere_j)
+                                .map(|data| Contact {
+                                    objects: (entity_i, entity_j),
+                                    data: data
+                                })
+                        },
+                        // Cuboid-cuboid
+                        (Model::Cuboid(cuboid_i), Model::Cuboid(cuboid_j))
+                        => {
+                            let cuboid_i = Cuboid {
+                                rotation: (orient_i * cuboid_i.rotation).normalize(),
+                                center: pos_i + cuboid_i.center.to_vec(),
+                                .. cuboid_i
+                            };
+                            let cuboid_j = Cuboid {
+                                rotation: (orient_j * cuboid_j.rotation).normalize(),
+                                center: pos_j + cuboid_j.center.to_vec(),
+                                .. cuboid_j
+                            };
+                            contact_cuboid_cuboid(cuboid_i, cuboid_j)
+                                .map(|data| Contact {
+                                    objects: (entity_i, entity_j),
+                                    data: data
+                                })
+                        },
+                        // Cuboid-sphere
+                        (Model::Sphere(sphere), Model::Cuboid(cuboid))
+                        => {
+                            let sphere = Sphere { radius: sphere.radius, center: pos_i + sphere.center.to_vec() };
+                            let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_j * cuboid.rotation, center: pos_j + cuboid.center.to_vec() };
+                            contact_sphere_cuboid(sphere, cuboid)
+                                .map(|data| Contact {
+                                    objects: (entity_i, entity_j),
+                                    data: data
+                                })
+                        },
+                        (Model::Cuboid(cuboid), Model::Sphere(sphere))
+                        => {
+                            let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_i * cuboid.rotation, center: pos_i + cuboid.center.to_vec() };
+                            let sphere = Sphere { radius: sphere.radius, center: pos_j + sphere.center.to_vec() };
+                            contact_sphere_cuboid(sphere, cuboid)
+                                .map(|data| Contact {
+                                    objects: (entity_j, entity_i),
+                                    data: data
+                                })
+                        }
+                    };
 
-                use physics::CollisionModel as Model;
-                let possible_contact = match (model_i, model_j) {
-                    // Sphere-sphere
-                    (Model::Sphere(sphere1_model), Model::Sphere(sphere2_model))
-                     => {
-                        let sphere_i = Sphere { radius: sphere1_model.radius, center: pos_i };
-                        let sphere_j = Sphere { radius: sphere2_model.radius, center: pos_j };
-                        contact_sphere_sphere(sphere_i, sphere_j)
-                            .map(|data| Contact {
-                                objects: (entity_i, entity_j),
-                                data: data
-                            })
-                    },
-                    // Cuboid-cuboid
-                    (Model::Cuboid(cuboid_i), Model::Cuboid(cuboid_j))
-                    => {
-                        let cuboid_i = Cuboid {
-                            rotation: (orient_i * cuboid_i.rotation).normalize(),
-                            center: pos_i + cuboid_i.center.to_vec(),
-                            .. cuboid_i
-                        };
-                        let cuboid_j = Cuboid {
-                            rotation: (orient_j * cuboid_j.rotation).normalize(),
-                            center: pos_j + cuboid_j.center.to_vec(),
-                            .. cuboid_j
-                        };
-                        contact_cuboid_cuboid(cuboid_i, cuboid_j)
-                            .map(|data| Contact {
-                                objects: (entity_i, entity_j),
-                                data: data
-                            })
-                    },
-                    // Cuboid-sphere
-                    (Model::Sphere(sphere), Model::Cuboid(cuboid))
-                    => {
-                        let sphere = Sphere { radius: sphere.radius, center: pos_i + sphere.center.to_vec() };
-                        let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_j * cuboid.rotation, center: pos_j + cuboid.center.to_vec() };
-                        contact_sphere_cuboid(sphere, cuboid)
-                            .map(|data| Contact {
-                                objects: (entity_i, entity_j),
-                                data: data
-                            })
-                    },
-                    (Model::Cuboid(cuboid), Model::Sphere(sphere))
-                    => {
-                        let cuboid = Cuboid { half_size: cuboid.half_size, rotation: orient_i * cuboid.rotation, center: pos_i + cuboid.center.to_vec() };
-                        let sphere = Sphere { radius: sphere.radius, center: pos_j + sphere.center.to_vec() };
-                        contact_sphere_cuboid(sphere, cuboid)
-                            .map(|data| Contact {
-                                objects: (entity_j, entity_i),
-                                data: data
-                            })
+                    if let Some(contact) = possible_contact {
+                        contacts.push_contact(contact);
                     }
-                };
-
-                if let Some(contact) = possible_contact {
-                    contacts.push_contact(contact);
                 }
             }
         }

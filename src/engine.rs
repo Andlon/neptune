@@ -111,11 +111,10 @@ impl<I> Engine<I> where I: SceneInitializer {
             let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
-                // Note: syncing transforms twice here is a stopgap solution
-                // during refactoring.
                 self.systems.physics.simulate(TIMESTEP, &mut self.stores.rigid_bodies);
-                sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
-                self.systems.collision.detect_collisions(&self.stores.transform, &self.stores.collision, &mut contacts);
+                self.systems.collision.detect_collisions(&self.stores.rigid_bodies,
+                                                         &self.stores.collision,
+                                                         &mut contacts);
                 self.systems.collision.resolve_collisions(&mut self.stores.rigid_bodies, &contacts);
                 sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
             }
