@@ -1,7 +1,7 @@
 use entity::{EntityManager, EntityBlueprint, Entity, LinearComponentStorage};
 use render::*;
 use physics::{PhysicsEngine, CollisionComponentStore,
-    CollisionEngine, ContactCollection, RigidBody};
+    CollisionEngine, RigidBody};
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -99,7 +99,6 @@ impl<I> Engine<I> where I: SceneInitializer {
 
         const TIMESTEP: f64 = 0.02;
 
-        let mut contacts = ContactCollection::new();
         let mut time_keeper = TimeKeeper::new();
 
         self.systems.scene.compile_shaders(&window);
@@ -111,11 +110,9 @@ impl<I> Engine<I> where I: SceneInitializer {
             let frame_time = time_keeper.produce_frame();
 
             while time_keeper.consume(TIMESTEP) {
-                self.systems.physics.simulate(TIMESTEP, &mut self.stores.rigid_bodies);
-                self.systems.collision.detect_collisions(&self.stores.rigid_bodies,
-                                                         &self.stores.collision,
-                                                         &mut contacts);
-                self.systems.collision.resolve_collisions(&mut self.stores.rigid_bodies, &contacts);
+                self.systems.physics.simulate(TIMESTEP,
+                    &mut self.stores.rigid_bodies,
+                    &self.stores.collision);
                 sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
             }
 

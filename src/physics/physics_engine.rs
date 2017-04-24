@@ -1,14 +1,20 @@
-use physics::{Mass, RigidBody};
+use physics::{Mass, RigidBody, ContactCollection,
+    CollisionEngine, CollisionComponentStore};
 use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Quaternion, UnitQuaternion};
 use entity::LinearComponentStorage;
 
 pub struct PhysicsEngine {
     // Buffers for intermediate computations
+    // TODO: Move into structs with specialized responsibility,
+    // i.e. LinearMotionIntegrator
     x: Vec<Point3<f64>>,
     v: Vec<Vector3<f64>>,
     a: Vec<Vector3<f64>>,
     a_next: Vec<Vector3<f64>>,
-    m: Vec<f64>
+    m: Vec<f64>,
+
+    collision_engine: CollisionEngine,
+    contacts: ContactCollection
 }
 
 fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: UnitQuaternion<f64>)
@@ -25,13 +31,17 @@ impl PhysicsEngine {
             v: Vec::new(),
             a: Vec::new(),
             a_next: Vec::new(),
-            m: Vec::new()
+            m: Vec::new(),
+
+            collision_engine: CollisionEngine::new(),
+            contacts: ContactCollection::new()
         }
     }
 
     pub fn simulate(&mut self,
                     dt: f64,
-                    rigid_bodies: &mut LinearComponentStorage<RigidBody>)
+                    rigid_bodies: &mut LinearComponentStorage<RigidBody>,
+                    collision_store: &CollisionComponentStore)
     {
         assert!(dt >= 0.0);
         // TODO: Eliminate transforms altogether
@@ -39,6 +49,11 @@ impl PhysicsEngine {
         self.integrate_linear_motion(dt);
         self.integrate_angular_motion(dt, rigid_bodies);
         self.sync_components_from_buffers(rigid_bodies);
+
+        self.collision_engine.detect_collisions(rigid_bodies,
+                                                collision_store,
+                                                &mut self.contacts);
+        self.collision_engine.resolve_collisions(rigid_bodies, &self.contacts);
     }
 
     fn populate_buffers(&mut self, rigid_bodies: &LinearComponentStorage<RigidBody>)
