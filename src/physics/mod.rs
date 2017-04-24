@@ -13,6 +13,3 @@ pub use self::collision_component::*;
 
 mod collision_engine;
 pub use self::collision_engine::*;
-
-mod contacts;
-pub use self::contacts::*;
