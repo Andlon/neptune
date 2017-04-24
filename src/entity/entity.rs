@@ -10,6 +10,18 @@ pub struct EntityManager {
     entities: HashSet<Entity>
 }
 
+impl From<Entity> for u32 {
+    fn from(e: Entity) -> u32 {
+        e.id
+    }
+}
+
+impl From<Entity> for usize {
+    fn from(e: Entity) -> usize {
+        e.id as usize
+    }
+}
+
 impl EntityManager {
     pub fn create(&mut self) -> Entity {
         // TODO: Make manager reuse entity IDs

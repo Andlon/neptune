@@ -54,6 +54,10 @@ impl CollisionComponentStore {
         self.entities.as_slice()
     }
 
+    pub fn lookup(&self, entity: Entity) -> Option<CollisionComponentId> {
+        self.entity_map.get(&entity).cloned()
+    }
+
     pub fn clear(&mut self) {
         self.models.clear();
         self.entity_map.clear();

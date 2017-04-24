@@ -1,5 +1,4 @@
-use physics::{Mass, RigidBody, ContactCollection,
-    CollisionEngine, CollisionComponentStore};
+use physics::{Mass, RigidBody, CollisionEngine, CollisionComponentStore};
 use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Quaternion, UnitQuaternion};
 use entity::LinearComponentStorage;
 
@@ -14,7 +13,6 @@ pub struct PhysicsEngine {
     m: Vec<f64>,
 
     collision_engine: CollisionEngine,
-    contacts: ContactCollection
 }
 
 fn world_inverse_inertia(local_inertia_inv: &Matrix3<f64>, orientation: UnitQuaternion<f64>)
@@ -34,7 +32,6 @@ impl PhysicsEngine {
             m: Vec::new(),
 
             collision_engine: CollisionEngine::new(),
-            contacts: ContactCollection::new()
         }
     }
 
@@ -44,16 +41,12 @@ impl PhysicsEngine {
                     collision_store: &CollisionComponentStore)
     {
         assert!(dt >= 0.0);
-        // TODO: Eliminate transforms altogether
         self.populate_buffers(rigid_bodies);
         self.integrate_linear_motion(dt);
         self.integrate_angular_motion(dt, rigid_bodies);
         self.sync_components_from_buffers(rigid_bodies);
 
-        self.collision_engine.detect_collisions(rigid_bodies,
-                                                collision_store,
-                                                &mut self.contacts);
-        self.collision_engine.resolve_collisions(rigid_bodies, &self.contacts);
+        self.collision_engine.detect_and_resolve(rigid_bodies, collision_store);
     }
 
     fn populate_buffers(&mut self, rigid_bodies: &LinearComponentStorage<RigidBody>)
