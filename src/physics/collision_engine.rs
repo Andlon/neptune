@@ -142,24 +142,41 @@ impl CollisionEngine {
             let (entity1, entity2) = (obj1.data, obj2.data);
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
-            if let (Some(RigidBody::Dynamic(mut rb1)), Some(RigidBody::Dynamic(mut rb2)))
-                = (rb1, rb2)
-            {
-                let m1 = rb1.mass.value();
-                let m2 = rb2.mass.value();
-                let total_mass = m1 + m2;
 
-                // Move the two objects linearly away from each other along the contact normal.
-                // The distance to move is determined by the relative masses of the two objects,
-                // and the penetration depth.
-                let obj1_move_dist = (m2 / total_mass) * contact.depth;
-                let obj2_move_dist = (m1 / total_mass) * contact.depth;
+            if let (Some(rb1), Some(rb2)) = (rb1, rb2) {
+                use RigidBody::{Static, Dynamic};
+                match (rb1, rb2) {
+                    (Dynamic(mut rb1), Dynamic(mut rb2)) => {
+                        let m1 = rb1.mass.value();
+                        let m2 = rb2.mass.value();
+                        let total_mass = m1 + m2;
 
-                rb1.state.position -= obj1_move_dist * contact.normal;
-                rb2.state.position += obj2_move_dist * contact.normal;
+                        // Move the two objects linearly away from each other along the contact normal.
+                        // The distance to move is determined by the relative masses of the two objects,
+                        // and the penetration depth.
+                        let obj1_move_dist = (m2 / total_mass) * contact.depth;
+                        let obj2_move_dist = (m1 / total_mass) * contact.depth;
 
-                bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
-                bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
+                        rb1.state.position -= obj1_move_dist * contact.normal;
+                        rb2.state.position += obj2_move_dist * contact.normal;
+
+                        bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
+                        bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
+                    },
+                    (Static(_), Dynamic(mut rb)) => {
+                        rb.state.position += contact.depth * contact.normal;
+                        bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb));
+                    },
+                    (Dynamic(mut rb), Static(_)) => {
+                        // Note the sign here! Normal points from dynamic to static,
+                        // so we must move the opposite direction of the normal
+                        rb.state.position -= contact.depth * contact.normal;
+                        bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb));
+                    },
+                    (Static(_), Static(_)) => {
+                        // Ignored
+                    }
+                }
             }
         }
     }
