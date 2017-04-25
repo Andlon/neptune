@@ -4,6 +4,9 @@ use ncollide::world::{CollisionWorld3, CollisionGroups, GeometricQueryType};
 use ncollide::shape::{ShapeHandle3, Ball, Cuboid};
 use ncollide::query::Contact;
 use entity::{Entity, LinearComponentStorage};
+use ordered_float::OrderedFloat;
+
+use itertools::Itertools;
 
 pub struct CollisionEngine {
     world: CollisionWorld3<f64, Entity>
@@ -98,8 +101,21 @@ impl CollisionEngine {
     fn resolve_velocities(&mut self,
         bodies: &mut LinearComponentStorage<RigidBody>)
     {
-        for (obj1, obj2, contact) in self.world.contacts() {
-            let (entity1, entity2) = (obj1.data, obj2.data);
+        let significant_contacts = self.world
+            .contacts()
+            .group_by(|&(ref obj1, ref obj2, _)| {
+                let (entity1, entity2) = (obj1.data, obj2.data);
+                (entity1, entity2)
+            })
+            .map(|((entity1, entity2), ref contacts_for_pair)| {
+                let significant_contact =
+                    contacts_for_pair.iter()
+                                        .map(|&(_, _, ref contacts)| contacts)
+                                        .max_by_key(|contact| OrderedFloat(contact.depth))
+                                        .expect("Every pair has at least one contact");
+                (entity1, entity2, significant_contact.clone())
+            });
+        for (entity1, entity2, contact) in significant_contacts {
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
 
@@ -124,7 +140,7 @@ impl CollisionEngine {
                         // of the static body
                         let rb = resolve_static_dynamic_velocity(rb,
                                         contact.world2,
-                                      - contact.normal);
+                                    - contact.normal);
                         bodies.set_component_for_entity(entity1, Dynamic(rb));
                     },
                     (Static(_), Static(_)) => {
@@ -138,8 +154,21 @@ impl CollisionEngine {
     fn resolve_interpenetrations(&mut self,
         bodies: &mut LinearComponentStorage<RigidBody>)
     {
-        for (obj1, obj2, contact) in self.world.contacts() {
-            let (entity1, entity2) = (obj1.data, obj2.data);
+        let significant_contacts = self.world
+            .contacts()
+            .group_by(|&(ref obj1, ref obj2, _)| {
+                let (entity1, entity2) = (obj1.data, obj2.data);
+                (entity1, entity2)
+            })
+            .map(|((entity1, entity2), ref contacts_for_pair)| {
+                let significant_contact =
+                    contacts_for_pair.iter()
+                                        .map(|&(_, _, ref contacts)| contacts)
+                                        .max_by_key(|contact| OrderedFloat(contact.depth))
+                                        .expect("Every pair has at least one contact");
+                (entity1, entity2, significant_contact.clone())
+            });
+        for (entity1, entity2, contact) in significant_contacts {
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
 
