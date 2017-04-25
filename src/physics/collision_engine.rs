@@ -62,19 +62,18 @@ impl CollisionEngine {
                 let rotation = rb.orientation() * rotation;
                 let position = Isometry3::from_parts(translation, rotation);
 
-                let shape_handle = match model {
-                    &CollisionModel::Sphere(sphere) => {
-                            let ball = Ball::new(sphere.radius);
-                            ShapeHandle3::new(ball)
-                        },
-                        &CollisionModel::Cuboid(cuboid) => {
-                            let half_extents = cuboid.half_size;
-                            let cuboid = Cuboid::new(half_extents);
-                            ShapeHandle3::new(cuboid)
-                        }
-                };
-
                 if self.world.collision_object(entity_uid).is_none() {
+                    let shape_handle = match model {
+                        &CollisionModel::Sphere(sphere) => {
+                                let ball = Ball::new(sphere.radius);
+                                ShapeHandle3::new(ball)
+                            },
+                            &CollisionModel::Cuboid(cuboid) => {
+                                let half_extents = cuboid.half_size;
+                                let cuboid = Cuboid::new(half_extents);
+                                ShapeHandle3::new(cuboid)
+                            }
+                    };
                     self.world.deferred_add(entity_uid,
                         position,
                         shape_handle,

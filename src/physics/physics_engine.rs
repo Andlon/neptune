@@ -147,26 +147,28 @@ impl PhysicsEngine {
 
         // TODO: Implement torque accumulators
 
-        for &mut (ref mut rb, _) in rigid_bodies.components_mut() {
-            if let &mut RigidBody::Dynamic(ref mut rb) = rb {
-                rb.prev_state.orientation = rb.state.orientation;
+        let dynamic_iter = rigid_bodies.components_mut()
+                                .iter_mut()
+                                .filter_map(|&mut (ref mut rb, _)| rb.as_dynamic_mut());
 
-                let orientation = rb.state.orientation;
-                let inv_inertia_body = rb.inv_inertia_body;
-                let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
-                let angular_momentum = rb.state.angular_momentum;
-                let angular_velocity = inverse_world_inertia * angular_momentum;
-                let angular_velocity_quat = Quaternion::from_parts(0.0, angular_velocity);
+        for rb in dynamic_iter {
+            rb.prev_state.orientation = rb.state.orientation;
 
-                // The orientation update first makes the quaternion non-unit.
-                // This means that we need to:
-                // 1. Turn the UnitQuaternion into Quaternion by unwrapping
-                // 2. Update the Quaternion instance
-                // 3. Normalize the updated Quaternion into a new UnitQuaternion
-                let orientation = orientation.unwrap();
-                let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
-                rb.state.orientation = UnitQuaternion::new_normalize(new_orientation);
-            }
+            let orientation = rb.state.orientation;
+            let inv_inertia_body = rb.inv_inertia_body;
+            let inverse_world_inertia = world_inverse_inertia(&inv_inertia_body, orientation);
+            let angular_momentum = rb.state.angular_momentum;
+            let angular_velocity = inverse_world_inertia * angular_momentum;
+            let angular_velocity_quat = Quaternion::from_parts(0.0, angular_velocity);
+
+            // The orientation update first makes the quaternion non-unit.
+            // This means that we need to:
+            // 1. Turn the UnitQuaternion into Quaternion by unwrapping
+            // 2. Update the Quaternion instance
+            // 3. Normalize the updated Quaternion into a new UnitQuaternion
+            let orientation = orientation.unwrap();
+            let new_orientation = orientation + 0.5 * dt * angular_velocity_quat * orientation;
+            rb.state.orientation = UnitQuaternion::new_normalize(new_orientation);
         }
     }
 
