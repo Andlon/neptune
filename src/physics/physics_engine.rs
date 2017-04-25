@@ -176,10 +176,6 @@ impl PhysicsEngine {
     {
         // TODO: This only takes into account gravity, so perhaps move into a gravity-only function.
         let num_objects = self.a.len();
-        self.a_next.clear();
-
-        // Reset the acceleration to zero before summation
-        self.a_next.resize(num_objects, zero::<Vector3<f64>>());
 
         const G: f64 = 6.674e-11;
         for i in 0 .. num_objects {
