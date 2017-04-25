@@ -1,7 +1,8 @@
 use physics::*;
-use nalgebra::{Matrix3, UnitQuaternion, Isometry3, Translation3};
+use nalgebra::{Vector3, Point3, Matrix3, UnitQuaternion, Isometry3, Translation3};
 use ncollide::world::{CollisionWorld3, CollisionGroups, GeometricQueryType};
 use ncollide::shape::{ShapeHandle3, Ball, Cuboid};
+use ncollide::query::Contact;
 use entity::{Entity, LinearComponentStorage};
 
 pub struct CollisionEngine {
@@ -99,84 +100,38 @@ impl CollisionEngine {
         bodies: &mut LinearComponentStorage<RigidBody>)
     {
         for (obj1, obj2, contact) in self.world.contacts() {
-            // TODO: Move restituion into contact
-            let restitution = 1.0;
-
-            // Use the following terminology (suffixed by 1 or 2):
-            // v: linear velocity (i.e. velocity of mass center)
-            // m: mass
-            // w: angular velocity
-            // r: contact point relative to center of mass
-            // i_inv: inverse inertia tensor (in world coordinates)
-            // v_p: velocity at point of contact (includes angular contribution)
-            //
-            // The mathematics here are based on the following Wikipedia article:
-            // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
-
-            let contact_point = contact.world1;
             let (entity1, entity2) = (obj1.data, obj2.data);
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
 
-            // Currently we only support dynamic-dynamic collisions.
-            // TODO: Support static-dynamic collisions (and ignore static-static)
-            if let (Some(RigidBody::Dynamic(mut rb1)), Some(RigidBody::Dynamic(mut rb2)))
-                = (rb1, rb2)
-            {
-                let orientation1 = rb1.state.orientation;
-                let orientation2 = rb2.state.orientation;
-                let v1 = rb1.state.velocity;
-                let v2 = rb2.state.velocity;
-                let m1 = rb1.mass.value();
-                let m2 = rb2.mass.value();
-                let r1 = contact_point - rb1.state.position;
-                let r2 = contact_point - rb2.state.position;
-                let i_inv1 = world_inverse_inertia(&rb1.inv_inertia_body, orientation1);
-                let i_inv2 = world_inverse_inertia(&rb2.inv_inertia_body, orientation2);
-                let w1 = i_inv1 * rb1.state.angular_momentum;
-                let w2 = i_inv2 * rb2.state.angular_momentum;
-                let v_p1 = v1 + w1.cross(&r1);
-                let v_p2 = v2 + w2.cross(&r2);
-
-                // Let n denote the contact normal
-                let n = contact.normal;
-
-                // Define the "relative velocity" at the point of impact
-                let v_r = v_p2 - v_p1;
-
-                // The separating velocity is the projection of the relative velocity
-                // onto the contact normal.
-                let v_separating = v_r.dot(&n);
-
-                // If v_separating is non-negative, the objects are not moving
-                // towards each other, and we do not need to add any corrective impulse.
-                if v_separating < 0.0 {
-                    // j_r denotes the relative (reaction) impulse
-                    let j_r = {
-                        let linear_denominator = 1.0 / m1 + 1.0 / m2;
-                        let angular_denominator1 = i_inv1 * r1.cross(&n).cross(&r1);
-                        let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
-                        let angular_denominator = (angular_denominator1 + angular_denominator2).dot(&n);
-                        let numerator = -(1.0 + restitution) * v_separating;
-                        numerator / (linear_denominator + angular_denominator)
-                    };
-
-                    // Compute post-collision velocities
-                    let v1_post = v1 - j_r / m1 * n;
-                    let v2_post = v2 + j_r / m2 * n;
-                    let w1_post = w1 - j_r * i_inv1 * r1.cross(&n);
-                    let w2_post = w2 + j_r * i_inv2 * r2.cross(&n);
-                    rb1.state.velocity = v1_post;
-                    rb2.state.velocity = v2_post;
-
-                    // TODO: Avoid the inversions here
-                    use interop::try_3x3_inverse;
-                    rb1.state.angular_momentum = try_3x3_inverse(i_inv1).unwrap() * w1_post;
-                    rb2.state.angular_momentum = try_3x3_inverse(i_inv2).unwrap() * w2_post;
+            if let (Some(rb1), Some(rb2)) = (rb1, rb2) {
+                use RigidBody::{Dynamic, Static};
+                match (rb1, rb2) {
+                    (Dynamic(rb1), Dynamic(rb2)) => {
+                            let (rb1, rb2) = resolve_dynamic_dynamic_velocity(
+                                rb1, rb2, &contact);
+                            bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
+                            bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
+                        },
+                    (Static(_), Dynamic(rb)) => {
+                        let rb = resolve_static_dynamic_velocity(rb,
+                                    contact.world1,
+                                    contact.normal);
+                        bodies.set_component_for_entity(entity2, Dynamic(rb));
+                    },
+                    (Dynamic(rb), Static(_)) => {
+                        // Because we define the contact point to be on the static
+                        // body, we must flip the normal and use the contact point
+                        // of the static body
+                        let rb = resolve_static_dynamic_velocity(rb,
+                                        contact.world2,
+                                      - contact.normal);
+                        bodies.set_component_for_entity(entity1, Dynamic(rb));
+                    },
+                    (Static(_), Static(_)) => {
+                        // We don't handle static-static collisions
+                    }
                 }
-
-                bodies.set_component_for_entity(entity1, RigidBody::Dynamic(rb1));
-                bodies.set_component_for_entity(entity2, RigidBody::Dynamic(rb2));
             }
         }
     }
@@ -209,5 +164,131 @@ impl CollisionEngine {
             }
         }
     }
+}
 
+fn resolve_dynamic_dynamic_velocity(
+    mut rb1: DynamicRigidBody,
+    mut rb2: DynamicRigidBody,
+    contact: &Contact<Point3<f64>>)
+    -> (DynamicRigidBody, DynamicRigidBody)
+{
+    // Use the following terminology (suffixed by 1 or 2):
+    // v: linear velocity (i.e. velocity of mass center)
+    // m: mass
+    // w: angular velocity
+    // r: contact point relative to center of mass
+    // i_inv: inverse inertia tensor (in world coordinates)
+    // v_p: velocity at point of contact (includes angular contribution)
+    //
+    // The mathematics here are based on the following Wikipedia article:
+    // https://en.wikipedia.org/wiki/Collision_response#Impulse-based_reaction_model
+    let restitution = 1.0;
+
+    let contact_point = contact.world1;
+    let orientation1 = rb1.state.orientation;
+    let orientation2 = rb2.state.orientation;
+    let v1 = rb1.state.velocity;
+    let v2 = rb2.state.velocity;
+    let m1 = rb1.mass.value();
+    let m2 = rb2.mass.value();
+    let r1 = contact_point - rb1.state.position;
+    let r2 = contact_point - rb2.state.position;
+    let i_inv1 = world_inverse_inertia(&rb1.inv_inertia_body,
+                                        orientation1);
+    let i_inv2 = world_inverse_inertia(&rb2.inv_inertia_body,
+                                        orientation2);
+    let w1 = i_inv1 * rb1.state.angular_momentum;
+    let w2 = i_inv2 * rb2.state.angular_momentum;
+    let v_p1 = v1 + w1.cross(&r1);
+    let v_p2 = v2 + w2.cross(&r2);
+
+    // Let n denote the contact normal
+    let n = contact.normal;
+
+    // Define the "relative velocity" at the point of impact
+    let v_r = v_p2 - v_p1;
+
+    // The separating velocity is the projection of the relative velocity
+    // onto the contact normal.
+    let v_separating = v_r.dot(&n);
+
+    // If v_separating is non-negative, the objects are not moving
+    // towards each other, and we do not need to add any corrective impulse.
+    if v_separating < 0.0 {
+        // j_r denotes the relative (reaction) impulse
+        let j_r = {
+            let linear_denominator = 1.0 / m1 + 1.0 / m2;
+            let angular_denominator1 = i_inv1 * r1.cross(&n).cross(&r1);
+            let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
+            let angular_denominator = (angular_denominator1 + angular_denominator2).dot(&n);
+            let numerator = -(1.0 + restitution) * v_separating;
+            numerator / (linear_denominator + angular_denominator)
+        };
+
+        // Compute post-collision velocities
+        let v1_post = v1 - j_r / m1 * n;
+        let v2_post = v2 + j_r / m2 * n;
+        let w1_post = w1 - j_r * i_inv1 * r1.cross(&n);
+        let w2_post = w2 + j_r * i_inv2 * r2.cross(&n);
+        rb1.state.velocity = v1_post;
+        rb2.state.velocity = v2_post;
+
+        // TODO: Avoid the inversions here
+        use interop::try_3x3_inverse;
+        rb1.state.angular_momentum = try_3x3_inverse(i_inv1).unwrap() * w1_post;
+        rb2.state.angular_momentum = try_3x3_inverse(i_inv2).unwrap() * w2_post;
+    }
+
+    (rb1, rb2)
+}
+
+fn resolve_static_dynamic_velocity(
+    mut rb: DynamicRigidBody,
+    point: Point3<f64>,
+    normal: Vector3<f64>)
+    -> DynamicRigidBody
+{
+    let restitution = 1.0;
+
+    let orientation2 = rb.state.orientation;
+    let v2 = rb.state.velocity;
+    let m2 = rb.mass.value();
+    let r2 = point - rb.state.position;
+    let i_inv2 = world_inverse_inertia(&rb.inv_inertia_body,
+                                        orientation2);
+    let w2 = i_inv2 * rb.state.angular_momentum;
+    let v_p2 = v2 + w2.cross(&r2);
+
+    let n = normal;
+
+    // Define the "relative velocity" v_r at the point of impact
+    let v_r = v_p2;
+
+    // The separating velocity is the projection of the relative velocity
+    // onto the contact normal.
+    let v_separating = v_r.dot(&n);
+
+    // If v_separating is non-negative, the objects are not moving
+    // towards each other, and we do not need to add any corrective impulse.
+    if v_separating < 0.0 {
+        // j_r denotes the relative (reaction) impulse
+        let j_r = {
+            let linear_denominator = 1.0 / m2;
+            let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
+            let angular_denominator = (angular_denominator2).dot(&n);
+            let numerator = -(1.0 + restitution) * v_separating;
+            numerator / (linear_denominator + angular_denominator)
+        };
+
+        // Compute post-collision velocities
+        let v2_post = v2 + j_r / m2 * n;
+        let w2_post = w2 + j_r * i_inv2 * r2.cross(&n);
+        rb.state.velocity = v2_post;
+
+        // TODO: Avoid the inversions here
+        use interop::try_3x3_inverse;
+        rb.state.angular_momentum = try_3x3_inverse(i_inv2).unwrap() * w2_post;
+    }
+
+    rb
 }

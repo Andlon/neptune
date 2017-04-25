@@ -35,18 +35,10 @@ pub struct DynamicBodyState {
     pub acceleration: Vector3<f64>
 }
 
-// #[derive(Clone, Debug)]
-// pub struct RigidBody {
-//     pub state: RigidBodyState,
-//     pub prev_state: RigidBodyState,
-//     pub mass: Mass,
-//     pub inv_inertia_body: Matrix3<f64>
-// }
-
 #[derive(Clone, Debug)]
 pub struct StaticRigidBody {
-    position: Point3<f64>,
-    orientation: UnitQuaternion<f64>
+    pub position: Point3<f64>,
+    pub orientation: UnitQuaternion<f64>
 }
 
 #[derive(Clone, Debug)]
@@ -87,6 +79,20 @@ impl RigidBody {
         match self {
             &RigidBody::Static(ref rb) => { rb.orientation },
             &RigidBody::Dynamic(ref rb) => { rb.state.orientation }
+        }
+    }
+
+    pub fn as_dynamic<'a>(&'a self) -> Option<&'a DynamicRigidBody> {
+        match self {
+            &RigidBody::Dynamic(ref rb) => Some(rb),
+            _ => None
+        }
+    }
+
+    pub fn as_dynamic_mut<'a>(&'a mut self) -> Option<&'a mut DynamicRigidBody> {
+        match self {
+            &mut RigidBody::Dynamic(ref mut rb) => Some(rb),
+            _ => None
         }
     }
 }

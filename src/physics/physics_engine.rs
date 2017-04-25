@@ -51,62 +51,57 @@ impl PhysicsEngine {
 
     fn populate_buffers(&mut self, rigid_bodies: &LinearComponentStorage<RigidBody>)
     {
-        let n = rigid_bodies.num_components();
-        self.x.resize(n, Point3::origin());
-        self.v.resize(n, zero::<Vector3<_>>());
-        self.a.resize(n, zero::<Vector3<_>>());
-        self.a_next.resize(n, zero::<Vector3<_>>());
-        self.m.resize(n, 0.0);
-        let rb_iter = rigid_bodies.components().iter().map(|&(ref rb, _)| rb);
-        let iter = izip!(rb_iter,
-                         self.x.iter_mut(),
-                         self.v.iter_mut(),
-                         self.a.iter_mut(),
-                         self.m.iter_mut());
-        for (rb, x, v, a, m) in iter {
-            if let &RigidBody::Dynamic(ref rb) = rb {
-                *x = rb.state.position;
-                *v = rb.state.velocity;
-                *a = rb.state.acceleration;
-                *m = rb.mass.value();
+        self.x.clear();
+        self.v.clear();
+        self.a.clear();
+        self.a_next.clear();
+        self.m.clear();
 
-                // Static bodies are ignored, but at the moment
-                // they still occupy space in the buffers, which is a bit of a waste
-            }
+        let dynamic_iter = rigid_bodies.components()
+                                  .iter()
+                                  .filter_map(|&(ref rb, _)| rb.as_dynamic());
+
+        for rb in dynamic_iter {
+            self.x.push(rb.state.position);
+            self.v.push(rb.state.velocity);
+            self.a.push(rb.state.acceleration);
+            self.m.push(rb.mass.value());
         }
+
+        self.a_next.resize(self.a.len(), zero::<Vector3<f64>>());
     }
 
     fn sync_components_from_buffers(&self,
         rigid_bodies: &mut LinearComponentStorage<RigidBody>)
     {
-        let n = rigid_bodies.num_components();
-        assert!(self.x.len() == n);
-        assert!(self.v.len() == n);
-        assert!(self.a_next.len() == n);
-        assert!(self.m.len() == n);
-
-        let rb_iter = rigid_bodies.components_mut()
+        let dynamic_iter = rigid_bodies.components_mut()
                                   .iter_mut()
-                                  .map(|&mut (ref mut rb, _)| rb);
-        let iter = izip!(rb_iter,
-                         self.x.iter(),
-                         self.v.iter(),
-                         self.a_next.iter(),
-                         self.m.iter());
+                                  .filter_map(|&mut (ref mut rb, _)| rb.as_dynamic_mut());
+
+        let iter = izip!(dynamic_iter, &self.x, &self.v, &self.a_next, &self.m);
+
+        let mut count = 0;
         for (rb, x, v, a_next, m) in iter {
-            if let &mut RigidBody::Dynamic(ref mut rb) = rb {
-                rb.prev_state.position = rb.state.position;
-                rb.state.position = x.clone();
+            rb.prev_state.position = rb.state.position;
+            rb.state.position = x.clone();
 
-                rb.prev_state.velocity = rb.state.velocity;
-                rb.state.velocity = v.clone();
+            rb.prev_state.velocity = rb.state.velocity;
+            rb.state.velocity = v.clone();
 
-                rb.prev_state.acceleration = rb.state.acceleration;
-                rb.state.acceleration = a_next.clone();
+            rb.prev_state.acceleration = rb.state.acceleration;
+            rb.state.acceleration = a_next.clone();
 
-                rb.mass = Mass::new(m.clone());
-            }
+            rb.mass = Mass::new(m.clone());
+
+            count += 1;
         }
+
+        // Sanity check
+        assert!(self.x.len() == count);
+        assert!(self.v.len() == count);
+        assert!(self.a.len() == count);
+        assert!(self.a_next.len() == count);
+        assert!(self.m.len() == count);
     }
 
     fn integrate_linear_motion(&mut self, dt: f64)
@@ -178,12 +173,11 @@ impl PhysicsEngine {
     fn compute_acceleration(&mut self)
     {
         // TODO: This only takes into account gravity, so perhaps move into a gravity-only function.
-        let num_objects = self.a_next.len();
+        let num_objects = self.a.len();
+        self.a_next.clear();
 
         // Reset the acceleration to zero before summation
-        for accel in self.a_next.iter_mut() {
-            *accel = zero::<Vector3<f64>>();
-        }
+        self.a_next.resize(num_objects, zero::<Vector3<f64>>());
 
         const G: f64 = 6.674e-11;
         for i in 0 .. num_objects {
