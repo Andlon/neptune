@@ -272,8 +272,8 @@ fn resolve_dynamic_dynamic_velocity(
         // j_r denotes the relative (reaction) impulse
         let j_r = {
             let linear_denominator = 1.0 / m1 + 1.0 / m2;
-            let angular_denominator1 = i_inv1 * r1.cross(&n).cross(&r1);
-            let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
+            let angular_denominator1 = (i_inv1 * r1.cross(&n)).cross(&r1);
+            let angular_denominator2 = (i_inv2 * r2.cross(&n)).cross(&r2);
             let angular_denominator = (angular_denominator1 + angular_denominator2).dot(&n);
             let numerator = -(1.0 + restitution) * v_separating;
             numerator / (linear_denominator + angular_denominator)
@@ -328,7 +328,7 @@ fn resolve_static_dynamic_velocity(
         // j_r denotes the relative (reaction) impulse
         let j_r = {
             let linear_denominator = 1.0 / m2;
-            let angular_denominator2 = i_inv2 * r2.cross(&n).cross(&r2);
+            let angular_denominator2 = (i_inv2 * r2.cross(&n)).cross(&r2);
             let angular_denominator = (angular_denominator2).dot(&n);
             let numerator = -(1.0 + restitution) * v_separating;
             numerator / (linear_denominator + angular_denominator)
