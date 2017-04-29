@@ -97,7 +97,10 @@ impl<I> Engine<I> where I: SceneInitializer {
     pub fn run(&mut self) {
         let window = Window::new();
 
-        const TIMESTEP: f64 = 0.02;
+        // For now we use an insanely high timestep to partially
+        // make up for the fact that our physics engine doesn't handle
+        // collisions very well yet.
+        const TIMESTEP: f64 = 1.0 / 200.0;
 
         let mut time_keeper = TimeKeeper::new();
 
