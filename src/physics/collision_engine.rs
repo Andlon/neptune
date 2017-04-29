@@ -33,9 +33,8 @@ impl CollisionEngine {
         collision_store: &CollisionComponentStore)
     {
         self.sync_shapes_and_positions(rigid_bodies, collision_store);
-        // self.sync_positions(collision_store, rigid_bodies);
         self.world.update();
-        self.resolve_collisions(rigid_bodies);
+        self.resolve_collisions(rigid_bodies, collision_store);
     }
 
     fn sync_shapes_and_positions(&mut self,
@@ -92,16 +91,25 @@ impl CollisionEngine {
     }
 
     pub fn resolve_collisions(&mut self,
-        bodies: &mut LinearComponentStorage<RigidBody>)
+        bodies: &mut LinearComponentStorage<RigidBody>,
+        collision_store: &CollisionComponentStore)
     {
-        self.resolve_velocities(bodies);
         self.resolve_interpenetrations(bodies);
+        self.sync_shapes_and_positions(bodies, collision_store);
+        self.world.update();
+        self.resolve_velocities(bodies);
     }
 
     fn resolve_velocities(&mut self,
         bodies: &mut LinearComponentStorage<RigidBody>)
     {
-        let significant_contacts = self.world
+        // Let the most significant contact between two rigid bodies
+        // be defined as the contact with the greatest penetration
+        // depth. Our rudimentary collision resolution
+        // method currently only processes the most significant
+        // contact.
+
+        let significant_contacts: Vec<_> = self.world
             .contacts()
             .group_by(|&(ref obj1, ref obj2, _)| {
                 let (entity1, entity2) = (obj1.data, obj2.data);
@@ -114,7 +122,8 @@ impl CollisionEngine {
                                         .max_by_key(|contact| OrderedFloat(contact.depth))
                                         .expect("Every pair has at least one contact");
                 (entity1, entity2, significant_contact.clone())
-            });
+            }).collect();
+
         for (entity1, entity2, contact) in significant_contacts {
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
@@ -154,7 +163,7 @@ impl CollisionEngine {
     fn resolve_interpenetrations(&mut self,
         bodies: &mut LinearComponentStorage<RigidBody>)
     {
-        let significant_contacts = self.world
+        let significant_contacts: Vec<_> = self.world
             .contacts()
             .group_by(|&(ref obj1, ref obj2, _)| {
                 let (entity1, entity2) = (obj1.data, obj2.data);
@@ -167,7 +176,7 @@ impl CollisionEngine {
                                         .max_by_key(|contact| OrderedFloat(contact.depth))
                                         .expect("Every pair has at least one contact");
                 (entity1, entity2, significant_contact.clone())
-            });
+            }).collect();
         for (entity1, entity2, contact) in significant_contacts {
             let rb1 = bodies.lookup_component_for_entity(entity1).cloned();
             let rb2 = bodies.lookup_component_for_entity(entity2).cloned();
