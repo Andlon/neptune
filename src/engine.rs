@@ -159,6 +159,9 @@ impl<I> MessageReceiver for Engine<I> where I: SceneInitializer {
                     if let Some(new_scene) = new_scene {
                         self.stores.camera = new_scene.camera;
                         reassemble_scene(&mut self.entity_manager, &mut self.stores, new_scene);
+
+                        // Temporary hack: make sure to clear state in physics engine
+                        self.systems.physics = PhysicsEngine::new();
                     }
                 }
                 _ => ()
