@@ -15,3 +15,6 @@ pub use self::collision_component::*;
 
 mod collision_engine;
 pub use self::collision_engine::*;
+
+mod force_generator;
+pub use self::force_generator::ForceGenerator;

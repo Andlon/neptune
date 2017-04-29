@@ -1,4 +1,5 @@
-use physics::{Mass, RigidBody, CollisionEngine, CollisionComponentStore};
+use physics::{Mass, RigidBody, CollisionEngine,
+    CollisionComponentStore, ForceGenerator};
 use nalgebra::{zero, norm_squared, Point3, Vector3, Matrix3, Quaternion, UnitQuaternion};
 use entity::LinearComponentStorage;
 
@@ -38,11 +39,12 @@ impl PhysicsEngine {
     pub fn simulate(&mut self,
                     dt: f64,
                     rigid_bodies: &mut LinearComponentStorage<RigidBody>,
-                    collision_store: &CollisionComponentStore)
+                    collision_store: &CollisionComponentStore,
+                    force_generators: &LinearComponentStorage<ForceGenerator>)
     {
         assert!(dt >= 0.0);
         self.populate_buffers(rigid_bodies);
-        self.integrate_linear_motion(dt);
+        self.integrate_linear_motion(dt, force_generators);
         self.integrate_angular_motion(dt, rigid_bodies);
         self.sync_components_from_buffers(rigid_bodies);
 
@@ -104,7 +106,9 @@ impl PhysicsEngine {
         assert!(self.m.len() == count);
     }
 
-    fn integrate_linear_motion(&mut self, dt: f64)
+    fn integrate_linear_motion(&mut self,
+        dt: f64,
+        force_generators: &LinearComponentStorage<ForceGenerator>)
     {
         // The following is an implementation of Velocity Verlet.
         // See https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
@@ -125,7 +129,7 @@ impl PhysicsEngine {
         }
 
         // Update acceleration
-        self.compute_acceleration();
+        self.compute_acceleration(force_generators);
 
         // Update velocities
         for i in 0 .. num_components {
@@ -140,7 +144,6 @@ impl PhysicsEngine {
         dt: f64,
         rigid_bodies: &mut LinearComponentStorage<RigidBody>)
     {
-
         // The integration for angular motion is a lot more complicated in general,
         // so we can't easily apply something similar to the Velocity Verlet algorithm
         // for linear motion. For now, we just use simple euler integrators instead.
@@ -172,13 +175,22 @@ impl PhysicsEngine {
         }
     }
 
-    fn compute_acceleration(&mut self)
+    fn compute_acceleration(&mut self,
+        force_generators: &LinearComponentStorage<ForceGenerator>)
     {
+
         // TODO: This only takes into account gravity, so perhaps move into a gravity-only function.
         let num_objects = self.a.len();
 
         const G: f64 = 6.674e-11;
         for i in 0 .. num_objects {
+            for &(ref gen, _) in force_generators.components() {
+                match gen {
+                    &ForceGenerator::UniformAccelerationField { acceleration } => {
+                        self.a_next[i] += acceleration;
+                    }
+                }
+            }
             for j in (i + 1) .. num_objects {
                 let m_i = self.m[i];
                 let m_j = self.m[j];

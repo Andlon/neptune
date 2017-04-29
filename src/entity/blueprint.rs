@@ -1,4 +1,4 @@
-use ::physics::{RigidBody, StaticRigidBody, CollisionModel};
+use ::physics::{RigidBody, StaticRigidBody, CollisionModel, ForceGenerator};
 use ::render::{SceneRenderable};
 use ::core::Transform;
 
@@ -6,7 +6,8 @@ pub struct EntityBlueprint {
     pub rigid_body: Option<RigidBody>,
     pub collision: Option<CollisionModel>,
     pub renderable: Option<SceneRenderable>,
-    pub transform: Option<Transform>
+    pub transform: Option<Transform>,
+    pub force: Option<ForceGenerator>
 }
 
 impl EntityBlueprint {
@@ -15,7 +16,8 @@ impl EntityBlueprint {
             rigid_body: None,
             collision: None,
             renderable: None,
-            transform: None
+            transform: None,
+            force: None
         }
     }
 

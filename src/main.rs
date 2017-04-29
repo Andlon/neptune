@@ -39,7 +39,7 @@ use entity::blueprints;
 use camera::Camera;
 use render::Color;
 use engine::{SceneBlueprint, SceneInitializer};
-use physics::RigidBody;
+use physics::{RigidBody, ForceGenerator};
 
 use cgmath::{Point3, Vector3, EuclideanSpace, Zero, Quaternion};
 use geometry::{Sphere, Cuboid};
@@ -278,8 +278,6 @@ impl Initializer {
         let red = Color::rgb(1.0, 0.0, 0.0);
         let graybrown = Color::rgb(205.0 / 255.0, 133.0 / 255.0 ,63.0/255.0);
 
-        use cgmath::{Rad, Quaternion, Rotation3};
-
         let blueprints = vec![
             CuboidObject::default()
                          .center(Point3::new(0.0, 0.0, -5.0))
@@ -294,7 +292,14 @@ impl Initializer {
                          .velocity(Vector3::new(0.0, 0.0, -1.0))
                          .mass(1.0)
                          .color(graybrown)
-                         .create_blueprint()
+                         .create_blueprint(),
+
+            EntityBlueprint {
+                force: Some(ForceGenerator::UniformAccelerationField {
+                    acceleration: nalgebra::Vector3::new(0.0, 0.0, -9.81)
+                }),
+                .. EntityBlueprint::empty()
+            }
         ];
 
         SceneBlueprint {

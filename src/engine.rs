@@ -1,7 +1,7 @@
 use entity::{EntityManager, EntityBlueprint, Entity, LinearComponentStorage};
 use render::*;
 use physics::{PhysicsEngine, CollisionComponentStore,
-    CollisionEngine, RigidBody};
+    CollisionEngine, RigidBody, ForceGenerator};
 use input_manager::InputManager;
 use message::{Message, MessageReceiver};
 use camera::{Camera, CameraController};
@@ -22,6 +22,7 @@ struct ComponentStores {
     pub scene: SceneRenderableStore,
     pub transform: TransformStore,
     pub rigid_bodies: LinearComponentStorage<RigidBody>,
+    pub force: LinearComponentStorage<ForceGenerator>,
     pub collision: CollisionComponentStore,
     pub camera: Camera
 }
@@ -63,6 +64,9 @@ impl ComponentStores {
         if let Some(renderable) = blueprint.renderable {
             self.scene.set_renderable(entity, renderable);
         }
+        if let Some(force) = blueprint.force {
+            self.force.set_component_for_entity(entity, force);
+        }
     }
 
     pub fn clear(&mut self) {
@@ -70,6 +74,7 @@ impl ComponentStores {
         self.transform.clear();
         self.rigid_bodies.clear();
         self.collision.clear();
+        self.force.clear();
     }
 }
 
@@ -115,7 +120,8 @@ impl<I> Engine<I> where I: SceneInitializer {
             while time_keeper.consume(TIMESTEP) {
                 self.systems.physics.simulate(TIMESTEP,
                     &mut self.stores.rigid_bodies,
-                    &self.stores.collision);
+                    &self.stores.collision,
+                    &self.stores.force);
                 sync_transforms(&self.stores.rigid_bodies, &mut self.stores.transform);
             }
 
@@ -177,6 +183,7 @@ fn prepare_component_stores() -> ComponentStores {
         scene: SceneRenderableStore::new(),
         transform: TransformStore::new(),
         rigid_bodies: LinearComponentStorage::new(),
+        force: LinearComponentStorage::new(),
         collision: CollisionComponentStore::new(),
         camera: Camera::look_in(Point3::origin(), Vector3::unit_y(), Vector3::unit_z()).unwrap()
     }
