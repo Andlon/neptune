@@ -1,4 +1,4 @@
-use ::physics::{RigidBody, CollisionModel};
+use ::physics::{RigidBody, StaticRigidBody, CollisionModel};
 use ::render::{SceneRenderable};
 use ::core::Transform;
 
@@ -17,5 +17,16 @@ impl EntityBlueprint {
             renderable: None,
             transform: None
         }
+    }
+
+    pub fn make_static(mut self) -> Self {
+        if let Some(RigidBody::Dynamic(rb)) = self.rigid_body {
+            let static_rb = StaticRigidBody {
+                position: rb.state.position,
+                orientation: rb.state.orientation
+            };
+            self.rigid_body = Some(RigidBody::Static(static_rb));
+        }
+        self
     }
 }

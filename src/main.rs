@@ -272,7 +272,7 @@ impl Initializer {
     }
 
     fn create_scene1(&self) -> SceneBlueprint {
-        let camera = Camera::look_in(Point3::new(5.0, 0.0, 0.0), -Vector3::unit_x(), Vector3::unit_z())
+        let camera = Camera::look_in(Point3::new(10.0, 0.0, 2.0), -Vector3::unit_x(), Vector3::unit_z())
                             .unwrap();
 
         let red = Color::rgb(1.0, 0.0, 0.0);
@@ -286,13 +286,13 @@ impl Initializer {
                          .half_size(Vector3::new(5.0, 5.0, 5.0))
                          .mass(1e10)
                          .color(red)
-                         .create_blueprint(),
+                         .create_blueprint()
+                         .make_static(),
 
             CuboidObject::default()
-                         .center(Point3::new(2.5, 0.0, 2.0))
-                         .velocity(Vector3::new(-0.1, 0.0, 0.0))
+                         .center(Point3::new(2.5, 0.0, 6.0))
+                         .velocity(Vector3::new(0.0, 0.0, -1.0))
                          .mass(1.0)
-                         .orientation(Quaternion::from_axis_angle(Vector3::unit_y() + Vector3::unit_x(), Rad(0.8)))
                          .color(graybrown)
                          .create_blueprint()
         ];
