@@ -15,7 +15,8 @@ pub struct Engine<Initializer: SceneInitializer> {
     should_continue: bool,
     systems: Systems,
     stores: ComponentStores,
-    entity_manager: EntityManager
+    entity_manager: EntityManager,
+    scene_index: usize
 }
 
 struct ComponentStores {
@@ -95,7 +96,8 @@ impl<I> Engine<I> where I: SceneInitializer {
             should_continue: true,
             systems: Systems::new(),
             stores: prepare_component_stores(),
-            entity_manager: EntityManager::new()
+            entity_manager: EntityManager::new(),
+            scene_index: usize::max_value()
         }
     }
 
@@ -111,8 +113,7 @@ impl<I> Engine<I> where I: SceneInitializer {
 
         self.systems.scene.compile_shaders(&window);
 
-        let scene = self.initializer.create_scene(0).expect("Initializer must provide scene 0!");
-        reassemble_scene(&mut self.entity_manager, &mut self.stores, scene);
+        self.reset_scene(0);
 
         while self.should_continue {
             let frame_time = time_keeper.produce_frame();
@@ -153,6 +154,19 @@ impl<I> Engine<I> where I: SceneInitializer {
             std::mem::swap(&mut messages, &mut response);
         }
     }
+
+    fn reset_scene(&mut self, index: usize) {
+        let new_scene = self.initializer.create_scene(index);
+        if let Some(new_scene) = new_scene {
+            let reset_camera = self.scene_index != index;
+            reassemble_scene(&mut self.entity_manager,
+                             &mut self.stores, new_scene, reset_camera);
+
+            // Temporary hack: make sure to clear state in physics engine
+            self.systems.physics = PhysicsEngine::new();
+            self.scene_index = index;
+        }
+    }
 }
 
 impl<I> MessageReceiver for Engine<I> where I: SceneInitializer {
@@ -160,16 +174,7 @@ impl<I> MessageReceiver for Engine<I> where I: SceneInitializer {
         for message in messages {
             match message.clone() {
                 Message::WindowClosed => self.should_continue = false,
-                Message::ReloadScene { index } => {
-                    let new_scene = self.initializer.create_scene(index);
-                    if let Some(new_scene) = new_scene {
-                        self.stores.camera = new_scene.camera;
-                        reassemble_scene(&mut self.entity_manager, &mut self.stores, new_scene);
-
-                        // Temporary hack: make sure to clear state in physics engine
-                        self.systems.physics = PhysicsEngine::new();
-                    }
-                }
+                Message::ReloadScene { index } => self.reset_scene(index),
                 _ => ()
             };
         }
@@ -191,8 +196,11 @@ fn prepare_component_stores() -> ComponentStores {
 
 fn reassemble_scene(entity_manager: &mut EntityManager,
                     stores: &mut ComponentStores,
-                    scene: SceneBlueprint) {
-    stores.camera = scene.camera;
+                    scene: SceneBlueprint,
+                    reset_camera: bool) {
+    if reset_camera {
+        stores.camera = scene.camera;
+    }
 
     stores.clear();
     for blueprint in scene.blueprints {
